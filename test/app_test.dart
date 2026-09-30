@@ -48,6 +48,13 @@ Future<void> boot(WidgetTester t, {Map<String, Object> prefs = const {}}) async 
   await t.pumpWidget(const SkyStackApp());
 }
 
+/// The animated background never stops ticking, so pumpAndSettle would time out.
+Future<void> settle(WidgetTester t) async {
+  for (var i = 0; i < 6; i++) {
+    await t.pump(const Duration(milliseconds: 150));
+  }
+}
+
 Future<void> startPlaying(WidgetTester t) async {
   await t.tap(find.text('▶  PLAY'));
   await t.pump();
@@ -68,10 +75,10 @@ void main() {
     await boot(t);
     expect(find.text('SKY STACK'), findsOneWidget);
     await t.tap(find.textContaining('Daily reward'));
-    await t.pumpAndSettle();
+    await settle(t);
     expect(app.store.coins, 50);
     await t.tap(find.byKey(const Key('doubleDaily')));
-    await t.pumpAndSettle();
+    await settle(t);
     expect(app.store.coins, 100);
     expect(ads.rewardedCalls, 1);
     expect(find.textContaining('Daily reward'), findsNothing);
@@ -104,51 +111,96 @@ void main() {
     await t.tap(find.byKey(const Key('pauseBtn')));
     await t.pump();
     await t.tap(find.text('🏠 Quit to menu'));
-    await t.pumpAndSettle();
+    await settle(t);
     expect(find.text('SKY STACK'), findsOneWidget);
   });
 
   testWidgets('shop: buy coins, buy skin, not enough coins, VIP removes ads button', (t) async {
     await boot(t);
     await t.tap(find.text('🛒 Shop'));
-    await t.pumpAndSettle();
+    await settle(t);
+    await t.ensureVisible(find.byKey(const Key('skin_sunset')));
+    await t.pump();
     await t.tap(find.byKey(const Key('skin_sunset')));
     await t.pump();
     expect(find.textContaining('Not enough coins'), findsOneWidget);
     await t.ensureVisible(find.textContaining('🪙 500 coins'));
+    await t.pump();
     await t.tap(find.textContaining('🪙 500 coins'));
     await t.pump();
     expect(app.store.coins, 500);
+    await t.ensureVisible(find.byKey(const Key('skin_sunset')));
+    await t.pump();
     await t.tap(find.byKey(const Key('skin_sunset')));
     await t.pump();
     expect(app.store.coins, 200);
     expect(app.store.skinId, 'sunset');
     await t.ensureVisible(find.textContaining('VIP: no ads'));
+    await t.pump();
     await t.tap(find.textContaining('VIP: no ads'));
     await t.pump();
     expect(app.store.vip && app.store.noAds, isTrue);
     expect(app.store.owns(skins.last), isTrue);
     await t.tap(find.byKey(const Key('back')));
-    await t.pumpAndSettle();
+    await settle(t);
     expect(find.textContaining('Remove Ads'), findsNothing);
   });
 
-  testWidgets('missions claim', (t) async {
+  testWidgets('missions: 3 distinct daily missions, claim pays reward', (t) async {
     await boot(t);
-    app.store.missionEvent('games', 3);
+    final ms = app.store.missions;
+    expect(ms.length, 3);
+    expect({for (final m in ms) m.text}.length, 3);
+    app.store.missionEvent(ms[0].type, ms[0].goal);
+    final reward = app.store.missions[0].reward;
     await t.tap(find.textContaining('Missions'));
-    await t.pumpAndSettle();
-    await t.tap(find.byKey(const Key('claim_2')));
+    await settle(t);
+    await t.tap(find.byKey(const Key('claim_0')));
     await t.pump();
-    expect(app.store.coins, 40);
-    expect(app.store.missions[2].claimed, isTrue);
+    expect(app.store.coins, reward);
+    expect(app.store.missions[0].claimed, isTrue);
     expect(find.text('✓ Done'), findsOneWidget);
+  });
+
+  testWidgets('chill mode starts with 3 lives and its own best score', (t) async {
+    await boot(t, prefs: {'games': 5});
+    await t.tap(find.textContaining('CHILL MODE'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.byKey(const Key('lives')), findsOneWidget);
+    expect(find.text('❤❤❤'), findsOneWidget);
+  });
+
+  testWidgets('backgrounds: buy and select a world, VIP owns all', (t) async {
+    await boot(t, prefs: {'coins': 300});
+    await t.tap(find.text('🛒 Shop'));
+    await settle(t);
+    await t.ensureVisible(find.byKey(const Key('world_storm')));
+    await t.pump();
+    await t.tap(find.byKey(const Key('world_storm')));
+    await t.pump();
+    expect(app.store.coins, 50);
+    expect(app.store.worldPref, 'storm');
+    expect(app.store.fixedWorldIndex, 3);
+    await t.ensureVisible(find.byKey(const Key('world_auto')));
+    await t.pump();
+    await t.tap(find.byKey(const Key('world_auto')));
+    await t.pump();
+    expect(app.store.fixedWorldIndex, isNull);
+    // not enough coins for another
+    await t.ensureVisible(find.byKey(const Key('world_space')));
+    await t.pump();
+    await t.tap(find.byKey(const Key('world_space')));
+    await t.pump();
+    expect(app.store.ownsWorld('space'), isFalse);
+    app.store.setVip();
+    expect(app.store.ownsWorld('space'), isTrue);
   });
 
   testWidgets('settings toggles persist to store', (t) async {
     await boot(t);
     await t.tap(find.text('⚙ Settings & Stats'));
-    await t.pumpAndSettle();
+    await settle(t);
     await t.tap(find.byKey(const Key('soundSwitch')));
     await t.pump();
     expect(app.store.sound, isFalse);

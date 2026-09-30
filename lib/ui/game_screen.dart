@@ -1,21 +1,29 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../game/block_painter.dart';
 import '../game/engine.dart';
+import '../game/scenery.dart';
+import '../game/worlds.dart';
 import '../services/app_services.dart';
 import 'widgets.dart';
 
 enum Phase { play, pause, over }
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final GameMode mode;
+  const GameScreen({super.key, this.mode = GameMode.classic});
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final engine = GameEngine();
+  final scenery = Scenery();
+  WorldState _ws = WorldState.at(0);
+  bool _rainOn = false;
   final _frame = FrameTicker();
   late final Ticker _ticker;
   Duration _last = Duration.zero;
@@ -34,6 +42,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    app.audio.setRain(false);
     _ticker.dispose();
     super.dispose();
   }
@@ -47,15 +56,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final dt = ((t - _last).inMicroseconds / 16667).clamp(0.0, 3.0);
     _last = t;
     engine.update(dt, moving: phase == Phase.play);
-    if (phase == Phase.pause) {
-      // keep visuals frozen: nothing else to do
+    _ws = engine.worldState;
+    scenery.update(dt / 60, _ws);
+    final wantRain = phase == Phase.play && _ws.rain > .35;
+    if (wantRain != _rainOn) {
+      _rainOn = wantRain;
+      app.audio.setRain(wantRain);
     }
     _frame.ping();
   }
 
   void _start() {
     final s = _size!;
-    engine.reset(s.width, s.height, isVip: app.store.vip);
+    engine.reset(s.width, s.height, isVip: app.store.vip, mode: widget.mode, fixedWorld: app.store.fixedWorldIndex);
     score.value = 0;
     revived = false;
     newBest = false;
@@ -68,13 +81,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final r = engine.drop();
     switch (r) {
       case DropResult.perfect:
-        app.audio.beep(520 + 60.0 * engine.combo.clamp(0, 10));
+        app.audio.chime(engine.combo - 1);
         app.audio.buzz();
       case DropResult.good:
-        app.audio.beep(300);
+        app.audio.beep(330, .1);
         app.audio.buzz(8);
       case DropResult.miss:
-        _gameOver();
+        app.audio.beep(140, .3);
+        app.audio.buzz(40);
+        if (engine.over) _gameOver();
       case DropResult.none:
     }
     score.value = engine.score;
@@ -84,7 +99,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final st = app.store;
     app.audio.beep(120, .4);
     app.audio.buzz(60);
-    newBest = st.recordGame(engine.score);
+    newBest = st.recordGame(engine.score, chill: engine.chill);
+    st.missionEvent('combo', engine.maxCombo);
+    if (engine.chill) st.missionEvent('chill', 1);
     st.missionEvent('score', engine.score);
     st.missionEvent('perfect', engine.runPerfects);
     st.missionEvent('games', 1);
@@ -127,7 +144,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         },
         child: Focus(
           autofocus: true,
-          child: SkyBackground(
+          child: ColoredBox(
+            color: const Color(0xFF0B1020),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
@@ -147,7 +165,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         behavior: HitTestBehavior.opaque,
                         onTapDown: (_) => _tap(),
                         child: CustomPaint(
-                          painter: _GamePainter(engine, _frame, () => phase == Phase.play && engine.score == 0 && app.store.games < 2),
+                          painter: GamePainter(engine, scenery, () => _ws, _frame, () => phase == Phase.play && engine.score == 0 && app.store.games < 2),
                         ),
                       ),
                     ),
@@ -155,11 +173,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const CoinBadge(),
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const CoinBadge(),
+                            if (widget.mode == GameMode.chill)
+                              ValueListenableBuilder<int>(
+                                valueListenable: score,
+                                builder: (_, _, _) => Text('❤' * engine.lives.clamp(0, 3), key: const Key('lives'), style: const TextStyle(color: Colors.redAccent, fontSize: 18)),
+                              ),
+                          ]),
                           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                             ListenableBuilder(
                               listenable: app.store,
-                              builder: (_, _) => Text('Best ${app.store.best}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                              builder: (_, _) => Text('Best ${widget.mode == GameMode.chill ? app.store.bestChill : app.store.best}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                             ),
                             if (phase == Phase.play)
                               IconButton(key: const Key('pauseBtn'), icon: const Icon(Icons.pause_circle, size: 34, color: Colors.white70), onPressed: _pause),
@@ -202,7 +227,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
 
   Widget _overPanel() => _panel([
-        const Text('Game Over', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
+        Text(widget.mode == GameMode.chill ? 'Chill Over' : 'Game Over', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
         if (newBest) const Text('🏆 NEW BEST!', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w800, fontSize: 22)),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -226,48 +251,80 @@ class FrameTicker extends ChangeNotifier {
   void ping() => notifyListeners();
 }
 
-class _GamePainter extends CustomPainter {
+class GamePainter extends CustomPainter {
   final GameEngine e;
+  final Scenery scenery;
+  final WorldState Function() ws;
   final bool Function() showTutorial;
-  _GamePainter(this.e, Listenable repaint, this.showTutorial) : super(repaint: repaint);
+  GamePainter(this.e, this.scenery, this.ws, Listenable repaint, this.showTutorial) : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) {
     final skin = app.store.skin;
-    final p = Paint();
-    void rect(double x, double y, double w, Color c, [double alpha = 1]) {
-      p.color = c.withValues(alpha: alpha);
-      canvas.drawRect(Rect.fromLTWH(x, y, w, GameEngine.blockH - 2), p);
+    canvas.save();
+    if (e.shake > 0) {
+      canvas.translate(sin(e.shake * 9) * e.shake * .8, cos(e.shake * 7) * e.shake * .5);
     }
+    scenery.paint(canvas, size, ws(), e.camY);
 
     for (final b in e.blocks) {
-      rect(b.x, e.yOf(b.i), b.w, GameEngine.colorFor(skin, b.i));
+      drawBlock(canvas, b.x, e.yOf(b.i), b.w, GameEngine.blockH, GameEngine.colorFor(skin, b.i));
     }
-    if (!e.over) rect(e.cur.x, e.yOf(e.cur.i), e.cur.w, GameEngine.colorFor(skin, e.cur.i));
+    if (!e.over) {
+      if (e.fever) {
+        canvas.drawRRect(
+            RRect.fromRectAndRadius(Rect.fromLTWH(e.cur.x - 4, e.yOf(e.cur.i) - 3, e.cur.w + 8, GameEngine.blockH + 4), const Radius.circular(9)),
+            Paint()..color = const Color(0xFFFFD54A).withValues(alpha: .45)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+      }
+      drawBlock(canvas, e.cur.x, e.yOf(e.cur.i), e.cur.w, GameEngine.blockH, GameEngine.colorFor(skin, e.cur.i));
+    }
     for (final f in e.falling) {
-      rect(f.x, e.yOf(f.i) + f.dy, f.w, GameEngine.colorFor(skin, f.i), .85);
+      drawBlock(canvas, f.x, e.yOf(f.i) + f.dy, f.w, GameEngine.blockH, GameEngine.colorFor(skin, f.i), alpha: .85);
     }
+    for (final r in e.rings) {
+      final t = 1 - r.life / 24;
+      canvas.drawOval(
+          Rect.fromCenter(center: Offset(r.x, e.yOf(r.i) + 14), width: 30 + t * 150, height: 12 + t * 40),
+          Paint()..style = PaintingStyle.stroke..strokeWidth = 2.5..color = Colors.white.withValues(alpha: (1 - t) * .8));
+    }
+    final pp = Paint();
     for (final pt in e.particles) {
-      p.color = pt.big ? Colors.white : const Color(0xFFFFD54A);
-      canvas.drawRect(Rect.fromLTWH(pt.x, pt.y, 4, 4), p);
+      pp.color = (pt.big ? const Color(0xFFFFFFFF) : const Color(0xFFFFD54A)).withValues(alpha: (pt.life / 30).clamp(0, 1));
+      canvas.drawCircle(Offset(pt.x, pt.y), pt.big ? 3 : 2.4, pp);
     }
     for (final pop in e.popups) {
-      _text(canvas, pop.text, Offset(pop.x, e.yOf(pop.i) - (45 - pop.life) - 22), 18, alpha: (pop.life / 20).clamp(0, 1).toDouble());
+      _text(canvas, pop.text, Offset(pop.x.clamp(60, size.width - 60), e.yOf(pop.i) - (45 - pop.life) - 22), 18, alpha: (pop.life / 20).clamp(0, 1).toDouble());
+    }
+    if (e.bannerLife > 0 && e.banner != null) {
+      final a = (e.bannerLife / 40).clamp(0.0, 1.0);
+      _text(canvas, e.banner!, Offset(size.width / 2, size.height * .30), 30 + (1 - a) * 4, alpha: a);
+    }
+    if (e.fever && !e.over) {
+      _text(canvas, '🔥 FEVER ×2 coins', Offset(size.width / 2, size.height * .26), 15, alpha: .9);
     }
     if (showTutorial()) {
       _text(canvas, 'TAP to drop the block', Offset(size.width / 2, size.height / 2), 22);
       _text(canvas, 'Line it up for PERFECT bonuses', Offset(size.width / 2, size.height / 2 + 30), 15);
     }
+    canvas.restore();
   }
 
   void _text(Canvas c, String s, Offset center, double size, {double alpha = 1}) {
     final tp = TextPainter(
-      text: TextSpan(text: s, style: TextStyle(color: Colors.white.withValues(alpha: alpha), fontSize: size, fontWeight: FontWeight.bold)),
+      text: TextSpan(
+        text: s,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: alpha),
+          fontSize: size,
+          fontWeight: FontWeight.bold,
+          shadows: [Shadow(blurRadius: 6, color: Colors.black.withValues(alpha: .6 * alpha))],
+        ),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(c, center - Offset(tp.width / 2, tp.height / 2));
   }
 
   @override
-  bool shouldRepaint(covariant _GamePainter old) => true;
+  bool shouldRepaint(covariant GamePainter old) => true;
 }

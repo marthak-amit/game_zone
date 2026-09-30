@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config.dart';
 import '../game/engine.dart';
+import '../game/worlds.dart';
 import '../services/app_services.dart';
 import '../store.dart';
 import 'widgets.dart';
@@ -31,6 +32,64 @@ class _ShopScreenState extends State<ShopScreen> {
     }
   }
 
+  static const worldPrice = 250;
+
+  Future<void> _tapWorld(World w) async {
+    final st = app.store;
+    if (st.ownsWorld(w.id)) {
+      st.setWorld(w.id);
+    } else if (st.spend(worldPrice)) {
+      st.buyWorld(w.id);
+      st.setWorld(w.id);
+      app.audio.beep(880, .2);
+    } else {
+      setState(() => msg = 'Not enough coins — watch an ad for free coins!');
+    }
+  }
+
+  Widget _worlds() {
+    final st = app.store;
+    Widget chip(String id, String label, Color a, Color b) {
+      final owned = st.ownsWorld(id);
+      final sel = st.worldPref == id;
+      return SizedBox(
+        height: 52,
+        child: FilledButton(
+          key: Key('world_$id'),
+          style: FilledButton.styleFrom(
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            side: sel ? const BorderSide(color: Colors.white, width: 3) : null,
+          ),
+          onPressed: () => id == 'auto' ? st.setWorld('auto') : _tapWorld(worlds.firstWhere((w) => w.id == id)),
+          child: Ink(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: LinearGradient(colors: [a, b], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label + (owned ? (sel ? ' ✓' : '') : '  🪙$worldPrice'),
+                    style: const TextStyle(fontWeight: FontWeight.w700, shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 2.6,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      children: [
+        chip('auto', '🌍 Auto (all worlds)', const Color(0xFF4C9BE8), const Color(0xFF3A1170)),
+        for (final w in worlds) chip(w.id, w.name, w.top, w.bottom),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = app.iap.prices;
@@ -41,6 +100,10 @@ class _ShopScreenState extends State<ShopScreen> {
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('Block skins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            ),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -70,6 +133,11 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
               ],
             ),
+            const Padding(
+              padding: EdgeInsets.only(top: 16, bottom: 8),
+              child: Text('Backgrounds', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            ),
+            _worlds(),
             SizedBox(height: 24, child: Center(child: Text(msg, style: const TextStyle(color: Colors.amber)))),
             Center(child: Column(children: [
               BigButton('🪙 500 coins — ${p[Sku.coins500] ?? r'$0.99'}', () => app.buy(context, Sku.coins500), color: kGold, textColor: Colors.black),

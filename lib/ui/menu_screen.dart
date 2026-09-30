@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/app_services.dart';
+import '../game/engine.dart';
 import 'game_screen.dart';
 import 'missions_screen.dart';
 import 'settings_screen.dart';
@@ -15,6 +16,7 @@ class MenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SkyBackground(
+        decorTower: true,
         child: SafeArea(
           child: ListenableBuilder(
             listenable: app.store,
@@ -33,9 +35,11 @@ class MenuScreen extends StatelessWidget {
                     child: SingleChildScrollView(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         const Text('SKY STACK',
-                            style: TextStyle(fontSize: 46, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                            style: TextStyle(fontSize: 46, fontWeight: FontWeight.w900, letterSpacing: 2, shadows: [Shadow(blurRadius: 18, color: Colors.black54), Shadow(blurRadius: 4, color: Colors.black38)])),
+                        const Text('stack · relax · repeat', style: TextStyle(color: Colors.white70, letterSpacing: 3, fontSize: 12)),
                         const SizedBox(height: 16),
                         BigButton('▶  PLAY', () => _push(context, const GameScreen()), color: kGreen),
+                        BigButton('🌧  CHILL MODE  (slow · 3 lives)', () => _push(context, const GameScreen(mode: GameMode.chill)), color: const Color(0xFF4F46E5)),
                         if (s.dailyAvailable) BigButton('🎁 Daily reward — Day ${s.nextStreak}: +${s.dailyReward}', () => _claimDaily(context), color: kGold, textColor: Colors.black),
                         BigButton('🎯 Missions${s.missionsReady > 0 ? ' (${s.missionsReady} ready!)' : ''}', () => _push(context, const MissionsScreen())),
                         BigButton('🛒 Shop', () => _push(context, const ShopScreen())),

@@ -4,6 +4,12 @@ One-tap arcade stacker for **Android, iOS and Web**, built with Flutter and desi
 rewarded ads, interstitials and in-app purchases.
 
 ## Features
+**Worlds:** six animated backgrounds that blend as your tower grows — Morning Sky, Golden Hour, Starry Night (moon, shooting stars),
+Rain Storm (rain, lightning, rain sound), Aurora, Deep Space (planet). Parallax city skyline with lit windows.
+**Modes:** Classic (speed rises smoothly with score *and* time) and Chill (slower, capped speed, 3 lives).
+**Feel:** glossy blocks, pentatonic chime melody on perfect streaks, FEVER (x2 coins at 5x combo), milestone banners, screen shake.
+**Shop:** block skins + unlockable fixed backgrounds. **Missions:** 3 of 6 rotate daily.
+
 Perfect-drop combos · falling-piece physics · tutorial · pause (auto-pause on app switch) · 6 skins ·
 daily login streak (up to Day 7, doubled by ad) · 3 daily missions · stats · share score · sound/haptics · saved progress.
 

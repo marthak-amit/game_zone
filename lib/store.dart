@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'game/worlds.dart';
 
 class Skin {
   final String id, name;
@@ -41,6 +43,16 @@ class Store extends ChangeNotifier {
 
   int get coins => _p.getInt('coins') ?? 0;
   int get best => _p.getInt('best') ?? 0;
+  int get bestChill => _p.getInt('bestChill') ?? 0;
+  String get worldPref => _p.getString('world') ?? 'auto';
+  bool ownsWorld(String id) => id == 'auto' || vip || (_p.getBool('own_w_$id') ?? false);
+  void buyWorld(String id) => _set('own_w_$id', true);
+  void setWorld(String id) => _set('world', id);
+  /// World index to lock the background to, or null for the automatic cycle.
+  int? get fixedWorldIndex {
+    final i = worlds.indexWhere((w) => w.id == worldPref);
+    return i < 0 || !ownsWorld(worldPref) ? null : i;
+  }
   int get games => _p.getInt('games') ?? 0;
   int get blocksTotal => _p.getInt('blocks') ?? 0;
   int get streak => _p.getInt('streak') ?? 0;
@@ -80,9 +92,10 @@ class Store extends ChangeNotifier {
   void equip(Skin s) => _set('skin', s.id);
 
   /// Records a finished game; returns true if it is a new best.
-  bool recordGame(int score) {
-    final isBest = score > best;
-    if (isBest) _p.setInt('best', score);
+  bool recordGame(int score, {bool chill = false}) {
+    final key = chill ? 'bestChill' : 'best';
+    final isBest = score > (_p.getInt(key) ?? 0);
+    if (isBest) _p.setInt(key, score);
     _p.setInt('games', games + 1);
     _p.setInt('blocks', blocksTotal + score);
     notifyListeners();
@@ -117,11 +130,19 @@ class Store extends ChangeNotifier {
         return;
       }
     }
-    missions = [
-      Mission('score', 'Reach score 10 in one game', 10, 50),
-      Mission('perfect', 'Land 15 perfect drops', 15, 60),
-      Mission('games', 'Play 3 games', 3, 40),
+    // 3 different missions per day from a pool, picked deterministically from the date.
+    final pool = <Mission Function()>[
+      () => Mission('score', 'Reach score 10 in one game', 10, 50),
+      () => Mission('score', 'Reach score 25 in one game', 25, 110),
+      () => Mission('perfect', 'Land 15 perfect drops', 15, 60),
+      () => Mission('games', 'Play 3 games', 3, 40),
+      () => Mission('combo', 'Reach a 5x perfect combo', 5, 70),
+      () => Mission('chill', 'Play a Chill mode game', 1, 40),
     ];
+    final now = DateTime.now();
+    final seed = now.year * 1000 + now.month * 50 + now.day;
+    final idx = List<int>.generate(pool.length, (i) => i)..shuffle(Random(seed));
+    missions = [for (final i in idx.take(3)) pool[i]()];
     _saveMissions();
   }
 
@@ -132,7 +153,7 @@ class Store extends ChangeNotifier {
     _ensureMissions();
     for (final m in missions) {
       if (m.type != type) continue;
-      m.progress = type == 'score' ? (v > m.progress ? v : m.progress) : m.progress + v;
+      m.progress = (type == 'score' || type == 'combo') ? (v > m.progress ? v : m.progress) : m.progress + v;
     }
     _saveMissions();
     notifyListeners();

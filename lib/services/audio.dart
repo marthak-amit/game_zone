@@ -3,14 +3,18 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 
-/// Tiny synthesized sound effects (no asset files needed) + haptics.
+/// Synthesized sound effects (no asset files needed) + haptics.
+/// Perfect drops play a rising pentatonic scale so a streak sounds like a soothing melody.
 class Audio {
   bool soundOn = true, vibeOn = true;
   final _cache = <String, Uint8List>{};
+  AudioPlayer? _rain;
+  bool _rainOn = false;
 
-  static Uint8List _tone(double freq, double seconds) {
-    const rate = 22050;
-    final n = (rate * seconds).toInt();
+  static const _pentatonic = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.5, 1567.98];
+
+  static Uint8List _wav(List<double> samples, {int rate = 22050}) {
+    final n = samples.length;
     final data = ByteData(44 + n * 2);
     void str(int o, String s) {
       for (var i = 0; i < s.length; i++) {
@@ -30,17 +34,58 @@ class Audio {
     str(36, 'data');
     data.setUint32(40, n * 2, Endian.little);
     for (var i = 0; i < n; i++) {
-      final env = 1 - i / n;
-      final v = (sin(2 * pi * freq * i / rate) * 0.3 * env * 32767).toInt();
-      data.setInt16(44 + i * 2, v, Endian.little);
+      data.setInt16(44 + i * 2, (samples[i].clamp(-1.0, 1.0) * 32767).toInt(), Endian.little);
     }
     return data.buffer.asUint8List();
   }
 
+  static Uint8List _tone(double freq, double seconds, {bool soft = false}) {
+    const rate = 22050;
+    final n = (rate * seconds).toInt();
+    final out = List<double>.filled(n, 0);
+    for (var i = 0; i < n; i++) {
+      final t = i / rate;
+      final attack = min(1.0, t / .005);
+      final env = attack * exp(-t * (soft ? 5 : 9));
+      var v = sin(2 * pi * freq * t);
+      if (soft) v += .3 * sin(2 * pi * freq * 2 * t) + .1 * sin(2 * pi * freq * 3 * t);
+      out[i] = v * .28 * env;
+    }
+    return _wav(out);
+  }
+
+  /// 2.5 s of soft filtered noise that loops seamlessly (cross-faded ends).
+  static Uint8List _rainLoop() {
+    const rate = 22050;
+    final n = (rate * 2.5).toInt(), fade = 2200;
+    final r = Random(3);
+    final raw = List<double>.filled(n + fade, 0);
+    var lp = 0.0;
+    for (var i = 0; i < raw.length; i++) {
+      lp += ((r.nextDouble() * 2 - 1) - lp) * .35; // low-pass => soft patter
+      raw[i] = lp;
+    }
+    final out = List<double>.filled(n, 0);
+    for (var i = 0; i < n; i++) {
+      out[i] = raw[i] * .33;
+      if (i < fade) {
+        final a = i / fade;
+        out[i] = (raw[i] * a + raw[n + i] * (1 - a)) * .33;
+      }
+    }
+    return _wav(out);
+  }
+
   void beep(double freq, [double seconds = .12]) {
     if (!soundOn) return;
-    final bytes = _cache.putIfAbsent('$freq-$seconds', () => _tone(freq, seconds));
-    _play(bytes);
+    _play(_cache.putIfAbsent('b$freq-$seconds', () => _tone(freq, seconds)));
+  }
+
+  /// Gentle chime climbing the pentatonic scale with [step] (combo count).
+  void chime(int step) {
+    if (!soundOn) return;
+    final f = _pentatonic[step.clamp(0, _pentatonic.length - 1)];
+    _play(_cache.putIfAbsent('c$f', () => _tone(f, .7, soft: true)));
   }
 
   Future<void> _play(Uint8List bytes) async {
@@ -49,6 +94,22 @@ class Audio {
       p.onPlayerComplete.first.then((_) => p.dispose());
       await p.play(BytesSource(bytes), volume: 0.7);
     } catch (_) {/* audio is best-effort */}
+  }
+
+  /// Start/stop the rain ambience.
+  Future<void> setRain(bool on) async {
+    final want = on && soundOn;
+    if (want == _rainOn) return;
+    _rainOn = want;
+    try {
+      if (want) {
+        _rain ??= AudioPlayer();
+        await _rain!.setReleaseMode(ReleaseMode.loop);
+        await _rain!.play(BytesSource(_cache.putIfAbsent('rain', _rainLoop)), volume: .3);
+      } else {
+        await _rain?.stop();
+      }
+    } catch (_) {}
   }
 
   void buzz([int ms = 10]) {

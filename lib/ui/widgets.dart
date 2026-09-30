@@ -1,29 +1,15 @@
 import 'package:flutter/material.dart';
 import '../game/engine.dart';
+import '../game/scenery.dart';
 import '../services/app_services.dart';
 
-/// Background gradient that follows the equipped skin.
+/// Animated world background (slowly cycles through all worlds) used on menus.
 class SkyBackground extends StatelessWidget {
   final Widget child;
-  final int shift;
-  const SkyBackground({super.key, required this.child, this.shift = 0});
+  final bool decorTower;
+  const SkyBackground({super.key, required this.child, this.decorTower = false});
   @override
-  Widget build(BuildContext context) {
-    final h = (app.store.skin.hue + shift * 3) % 360;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            HSLColor.fromAHSL(1, h, .5, .14).toColor(),
-            HSLColor.fromAHSL(1, (h + 40) % 360, .6, .30).toColor(),
-          ],
-        ),
-      ),
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) => SceneryView(decorTower: decorTower, child: child);
 }
 
 class BigButton extends StatelessWidget {
