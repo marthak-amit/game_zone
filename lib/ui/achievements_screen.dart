@@ -41,7 +41,7 @@ class AchievementsScreen extends StatelessWidget {
             Text(a.desc, style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ]),
         ),
-        Text(done ? '✓' : '🪙${a.reward}', style: TextStyle(fontWeight: FontWeight.w800, color: done ? const Color(0xFF5BE7A9) : Colors.amber)),
+        Text(done ? '✅' : '🪙${a.reward}', style: TextStyle(fontWeight: FontWeight.w800, color: done ? const Color(0xFF5BE7A9) : Colors.amber)),
       ]),
     );
   }

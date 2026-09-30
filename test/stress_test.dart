@@ -121,7 +121,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 600));
     for (var g = 1; g <= 12; g++) {
       await playOneGame(t);
-      await t.tap(find.text('↻ Play again'));
+      await t.tap(find.text('🔄 Play again'));
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
       expect(find.byKey(const Key('finalScore')), findsNothing, reason: 'game $g: next round must start');
@@ -141,7 +141,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 600));
     for (var g = 1; g <= 4; g++) {
       await playOneGame(t, perfects: 3);
-      await t.tap(find.text('↻ Play again'));
+      await t.tap(find.text('🔄 Play again'));
       await t.pump(const Duration(milliseconds: 200));
       // wait out any ad timeout (45 s) in realistic frames
       for (var i = 0; i < 50 && find.byKey(const Key('finalScore')).evaluate().isNotEmpty; i++) {
@@ -159,11 +159,11 @@ void main() {
     await t.pump(const Duration(milliseconds: 600));
     for (var g = 1; g <= 2; g++) {
       await playOneGame(t, perfects: 3);
-      await t.tap(find.text('↻ Play again'));
+      await t.tap(find.text('🔄 Play again'));
       await t.pump(const Duration(milliseconds: 300));
     }
     await playOneGame(t, perfects: 4); // the 3rd game is when the interstitial is due
-    final spot = t.getCenter(find.text('↻ Play again'));
+    final spot = t.getCenter(find.text('🔄 Play again'));
     final before = ads.interstitials;
     for (var i = 0; i < 5; i++) {
       await t.tapAt(spot); // mash the button

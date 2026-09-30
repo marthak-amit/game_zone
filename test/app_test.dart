@@ -128,7 +128,7 @@ void main() {
     expect(app.store.games, 6);
     expect(app.store.coins, greaterThanOrEqualTo(0));
     // play again returns to playing
-    await t.tap(find.text('↻ Play again'));
+    await t.tap(find.text('🔄 Play again'));
     await t.pump(const Duration(milliseconds: 200));
     expect(find.byKey(const Key('finalScore')), findsNothing);
     expect(find.byKey(const Key('pauseBtn')), findsOneWidget);
@@ -196,7 +196,7 @@ void main() {
     await t.pump();
     expect(app.store.coins, reward);
     expect(app.store.missions[0].claimed, isTrue);
-    expect(find.text('✓ Done'), findsOneWidget);
+    expect(find.text('✅ Done'), findsOneWidget);
   });
 
   testWidgets('backgrounds: buy and select a world, VIP owns all', (t) async {

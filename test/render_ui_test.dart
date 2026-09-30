@@ -25,7 +25,13 @@ void main() {
     final font = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/Roboto-Bold.ttf').readAsBytesSync();
     final loader = FontLoader('Roboto')..addFont(Future.value(ByteData.view(font.buffer)));
     await loader.load();
-    t.view.physicalSize = const Size(400 * 2, 800 * 2);
+    Future<void> load(String family, String path) async {
+      final b = File(path).readAsBytesSync();
+      await (FontLoader(family)..addFont(Future.value(ByteData.view(b.buffer)))).load();
+    }
+    await load('MaterialIcons', '/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+    await load('NotoColorEmoji', '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf');
+    t.view.physicalSize = const Size(390 * 2, 844 * 2);
     t.view.devicePixelRatio = 2;
     addTearDown(t.view.reset);
 
@@ -33,7 +39,7 @@ void main() {
       final key = GlobalKey();
       await t.runAsync(() async {
         final b = t.renderObject<RenderRepaintBoundary>(find.byType(RepaintBoundary).first);
-        final data = await (await b.toImage(pixelRatio: 1)).toByteData(format: ui.ImageByteFormat.png);
+        final data = await (await b.toImage(pixelRatio: 2)).toByteData(format: ui.ImageByteFormat.png);
         File('${dir.path}/$name.png').writeAsBytesSync(data!.buffer.asUint8List());
       });
       expect(key, isNotNull);
@@ -44,7 +50,8 @@ void main() {
       app = AppServices(store: await Store.load());
       app.audio.available = false;
       await t.pumpWidget(RepaintBoundary(
-        child: MaterialApp(debugShowCheckedModeBanner: false, theme: ThemeData(brightness: Brightness.dark, fontFamily: 'Roboto', useMaterial3: true), home: home),
+        key: UniqueKey(), // a fresh widget tree for every screenshot
+        child: MaterialApp(debugShowCheckedModeBanner: false, theme: ThemeData(brightness: Brightness.dark, fontFamily: 'Roboto', fontFamilyFallback: const ['NotoColorEmoji'], useMaterial3: true), home: DefaultTextStyle.merge(style: const TextStyle(fontFamily: 'Roboto', fontFamilyFallback: ['NotoColorEmoji']), child: home)),
       ));
       await t.pump(const Duration(milliseconds: 400));
       if (act != null) await act();
@@ -60,6 +67,20 @@ void main() {
     await show(const AchievementsScreen(), prefs, 'ui_achievements');
     await show(const ShopScreen(), prefs, 'ui_shop');
     await show(const SettingsScreen(), prefs, 'ui_settings');
+    for (final w in [('morning', 'day'), ('storm', 'storm'), ('night', 'night')]) {
+      await show(const GameScreen(), {'games': 9, 'best': 40, 'coins': 1240, 'xp': 2300, 'vip': true, 'world': w.$1}, 'ui_play_${w.$2}', pumpMs: 1500, act: () async {
+        await t.pump(const Duration(milliseconds: 900));
+        final st = t.state(find.byType(GameScreen)) as dynamic;
+        for (var i = 0; i < 8; i++) {
+          st.engine.cur.x = i % 4 == 3 ? st.engine.top.x + 26 : st.engine.top.x;
+          await t.tap(find.byKey(const Key('playfield')));
+          await t.pump(const Duration(milliseconds: 90));
+        }
+        for (var i = 0; i < 60; i++) {
+          await t.pump(const Duration(milliseconds: 16));
+        }
+      });
+    }
     await show(const GameScreen(), {'games': 5}, 'ui_gameover_newbest', pumpMs: 16, act: () async {
       await t.pump(const Duration(milliseconds: 900)); // 'Get ready' grace
       final st = t.state(find.byType(GameScreen)) as dynamic;

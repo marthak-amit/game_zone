@@ -397,7 +397,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         ),
       const SizedBox(height: 8),
       if (!revived && engine.score >= 3) BigButton('📺 Continue (watch ad)', _revive, color: kGold, textColor: Colors.black),
-      BigButton('↻ Play again', _again, height: 58),
+      BigButton('🔄 Play again', _again, height: 58),
       if (engine.runCoins > 0) BigButton('📺 Double coins', doubled ? null : _double, color: kGreen),
       Row(mainAxisSize: MainAxisSize.min, children: [
         BigButton('📤 Share', () => SharePlus.instance.share(ShareParams(text: 'I stacked ${engine.score} blocks in Sky Stack! Can you beat me?')), color: kGrey, width: 136, height: 46),

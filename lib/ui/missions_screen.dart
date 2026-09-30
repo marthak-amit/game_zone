@@ -44,7 +44,7 @@ class MissionsScreen extends StatelessWidget {
               app.store.claimMission(m);
               app.audio.beep(880, .2);
             } : null,
-            child: Text(m.claimed ? '✓ Done' : '🪙 ${m.reward}'),
+            child: Text(m.claimed ? '✅ Done' : '🪙 ${m.reward}'),
           ),
         ]),
       );

@@ -68,7 +68,7 @@ class _ShopScreenState extends State<ShopScreen> {
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(label + (owned ? (sel ? ' ✓' : '') : '  🪙$worldPrice'),
+                child: Text(label + (owned ? (sel ? ' ✅' : '') : '  🪙$worldPrice'),
                     style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, shadows: [Shadow(blurRadius: 4, color: Colors.black87)])),
               ),
             ),
@@ -128,7 +128,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       Flexible(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(s.name + (app.store.owns(s) ? (app.store.skinId == s.id ? ' ✓' : '') : s.price > 0 ? '  🪙${s.price}' : '  👑VIP')),
+                          child: Text(s.name + (app.store.owns(s) ? (app.store.skinId == s.id ? ' ✅' : '') : s.price > 0 ? '  🪙${s.price}' : '  👑VIP')),
                         ),
                       ),
                     ]),
