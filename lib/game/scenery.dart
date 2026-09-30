@@ -343,21 +343,33 @@ class SceneryView extends StatefulWidget {
   State<SceneryView> createState() => _SceneryViewState();
 }
 
+/// World position shared by every menu screen so the scenery (and music) continue seamlessly between them.
+double _sharedPos = 0;
+
 class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStateMixin {
   final scenery = Scenery();
   late final Ticker _t;
   Duration _last = Duration.zero;
   double pos = 0;
+  int _musicWorld = -1;
   final _tick = ValueNotifier<int>(0);
 
   @override
   void initState() {
     super.initState();
-    pos = widget.fixed ?? 0;
+    pos = widget.fixed ?? _sharedPos;
     _t = createTicker((d) {
       final dt = ((d - _last).inMicroseconds / 1e6).clamp(0.0, .1);
       _last = d;
-      if (widget.fixed == null) pos += dt * .05;
+      if (widget.fixed == null) {
+        pos += dt * .05;
+        _sharedPos = pos;
+      }
+      final idx = (widget.fixed ?? pos).round() % worlds.length;
+      if (idx != _musicWorld) {
+        _musicWorld = idx;
+        app.audio.music.setWorld(idx);
+      }
       scenery.update(dt, WorldState.at(widget.fixed ?? pos));
       _tick.value++;
     })..start();
@@ -387,10 +399,10 @@ class _ScenePainter extends CustomPainter {
   @override
   void paint(Canvas c, Size size) {
     final w = WorldState.at(s.widget.fixed ?? s.pos);
-    final gt = size.height - 90;
+    final gt = size.height - (s.widget.decorTower ? 58 : 90);
     s.scenery.paint(c, size, w, 0, groundTop: gt);
     if (s.widget.decorTower) {
-      const cols = 7;
+      const cols = 5;
       for (var i = 0; i < cols; i++) {
         final width = 150.0 - i * 12 + (i.isOdd ? -6 : 6);
         final sway = sin(s.scenery.time * .9 + i * .4) * (i * .6);

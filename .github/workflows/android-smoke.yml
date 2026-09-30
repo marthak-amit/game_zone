@@ -2,7 +2,7 @@ name: Android smoke test
 on:
   workflow_dispatch:
   push:
-    paths: ['lib/**', 'android/**', 'pubspec.yaml', '.github/workflows/android-smoke.yml']
+    paths: ['lib/**', 'android/**', 'pubspec.yaml', 'scripts/**', '.github/workflows/android-smoke.yml']
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -26,15 +26,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: |
-            adb logcat -c
-            adb install -r build/app/outputs/flutter-apk/app-release.apk
-            adb shell monkey -p com.amit.sky_stack -c android.intent.category.LAUNCHER 1
-            sleep 25
-            adb exec-out screencap -p > smoke.png || true
-            echo "=== CRASH BUFFER ==="; adb logcat -d -b crash | head -40 || true
-            echo "=== FLUTTER LOG ==="; adb logcat -d -s flutter:V | tail -30 || true
-            if adb shell pidof com.amit.sky_stack; then echo "SMOKE RESULT: APP RUNNING OK"; else echo "SMOKE RESULT: APP NOT RUNNING"; exit 1; fi
+          script: bash scripts/android_smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: smoke-screenshot, path: smoke.png }
+        with: { name: smoke-screenshots, path: 'smoke_*.png' }

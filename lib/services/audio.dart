@@ -2,11 +2,25 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
+import 'music.dart';
+import 'voice.dart';
 
 /// Synthesized sound effects (no asset files needed) + haptics.
 /// Perfect drops play a rising pentatonic scale so a streak sounds like a soothing melody.
 class Audio {
   bool soundOn = true, vibeOn = true;
+  final music = Music();
+  final voice = Voice();
+
+  /// Set false in tests / unsupported platforms to disable all sound plugins.
+  bool _available = true;
+  bool get available => _available;
+  set available(bool v) {
+    _available = v;
+    music.available = v;
+    voice.available = v;
+  }
+
   final _cache = <String, Uint8List>{};
   AudioPlayer? _rain;
   bool _rainOn = false;
@@ -77,13 +91,13 @@ class Audio {
   }
 
   void beep(double freq, [double seconds = .12]) {
-    if (!soundOn) return;
+    if (!soundOn || !_available) return;
     _play(_cache.putIfAbsent('b$freq-$seconds', () => _tone(freq, seconds)));
   }
 
   /// Gentle chime climbing the pentatonic scale with [step] (combo count).
   void chime(int step) {
-    if (!soundOn) return;
+    if (!soundOn || !_available) return;
     final f = _pentatonic[step.clamp(0, _pentatonic.length - 1)];
     _play(_cache.putIfAbsent('c$f', () => _tone(f, .7, soft: true)));
   }
@@ -98,7 +112,7 @@ class Audio {
 
   /// Start/stop the rain ambience.
   Future<void> setRain(bool on) async {
-    final want = on && soundOn;
+    final want = on && soundOn && _available;
     if (want == _rainOn) return;
     _rainOn = want;
     try {
@@ -111,6 +125,29 @@ class Audio {
       }
     } catch (_) {}
   }
+
+  /// Celebration jingle: a bright rising arpeggio with a sparkling tail (new high score, level up).
+  void fanfare() {
+    if (!soundOn || !_available) return;
+    _play(_cache.putIfAbsent('fanfare', () {
+      const rate = 22050;
+      final n = (rate * 2.2).toInt();
+      final out = List<double>.filled(n, 0);
+      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
+      for (var k = 0; k < notes.length; k++) {
+        final s0 = (rate * k * .12).toInt();
+        for (var i = 0; s0 + i < n; i++) {
+          final t = i / rate;
+          final env = min(1.0, t / .004) * exp(-t * 3.2);
+          out[s0 + i] += (sin(2 * pi * notes[k] * t) + .3 * sin(2 * pi * notes[k] * 2 * t)) * .17 * env;
+        }
+      }
+      return _wav(out);
+    }));
+  }
+
+  /// Short "whoosh + thud" for a miss.
+  void miss() => beep(150, .3);
 
   void buzz([int ms = 10]) {
     if (!vibeOn) return;

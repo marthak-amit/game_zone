@@ -67,29 +67,6 @@ void main() {
     expect(e.speed, 6.5);
   });
 
-  test('chill mode is slower, capped low, and has 3 lives', () {
-    final e = GameEngine(rnd: Random(1))..reset(360, 640, mode: GameMode.chill);
-    expect(e.lives, 3);
-    expect(e.speed, lessThan(2));
-    for (var i = 0; i < 300; i++) {
-      e.cur.x = e.top.x;
-      e.drop();
-    }
-    expect(e.speed, lessThanOrEqualTo(3.2));
-    // a miss costs a life but keeps the tower
-    final h = e.blocks.length;
-    e.cur.x = e.top.x + 999;
-    expect(e.drop(), DropResult.miss);
-    expect(e.over, isFalse);
-    expect(e.lives, 2);
-    expect(e.blocks.length, h);
-    e.cur.x = e.top.x + 999;
-    e.drop();
-    e.cur.x = e.top.x + 999;
-    e.drop();
-    expect(e.over, isTrue);
-  });
-
   test('fever after 5 perfects doubles coins', () {
     final e = fresh();
     var before = 0;

@@ -14,10 +14,45 @@ Future<void> main() async {
   app.init();
 }
 
-class SkyStackApp extends StatelessWidget {
+class SkyStackApp extends StatefulWidget {
   const SkyStackApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  State<SkyStackApp> createState() => _SkyStackAppState();
+}
+
+class _SkyStackAppState extends State<SkyStackApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Silence music and ambience while the app is in the background.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.resumed) {
+      app.audio.music.resume();
+    } else {
+      app.audio.music.pause();
+      app.audio.setRain(false);
+      app.audio.voice.stop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+        // Browsers only allow audio after a user gesture; retry music on any touch.
+        onPointerDown: (_) => app.audio.music.ensure(),
+        child: _buildApp(),
+      );
+
+  Widget _buildApp() => MaterialApp(
         title: 'Sky Stack',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

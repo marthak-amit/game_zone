@@ -25,6 +25,9 @@ class AppServices {
   void _syncAudio() {
     audio.soundOn = store.sound;
     audio.vibeOn = store.vibe;
+    audio.voice.enabled = store.voice;
+    audio.music.setEnabled(store.music);
+    if (!store.sound) audio.setRain(false);
   }
 
   Future<void> init() async {

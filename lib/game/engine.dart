@@ -5,8 +5,6 @@ import 'worlds.dart';
 
 enum DropResult { none, perfect, good, miss }
 
-enum GameMode { classic, chill }
-
 class Block {
   double x, w;
   final int i;
@@ -46,7 +44,7 @@ class Ring {
 /// Pure game logic, independent of Flutter widgets (unit-testable).
 class GameEngine {
   static const double blockH = 28, baseInset = 140, startWidth = 200, perfectTol = 5;
-  static const int blocksPerWorld = 12, feverCombo = 5, chillLives = 3;
+  static const int blocksPerWorld = 12, feverCombo = 5;
 
   final Random rnd;
   GameEngine({Random? rnd}) : rnd = rnd ?? Random();
@@ -54,11 +52,10 @@ class GameEngine {
   double width = 360, height = 640;
   List<Block> blocks = [];
   late Block cur;
-  int score = 0, combo = 0, maxCombo = 0, runCoins = 0, runPerfects = 0, lives = 1;
+  int score = 0, combo = 0, maxCombo = 0, runCoins = 0, runPerfects = 0;
   double speed = 2.0, camY = 0, elapsed = 0, worldPos = 0, shake = 0;
   int dir = 1;
   bool over = false, vip = false;
-  GameMode mode = GameMode.classic;
   int? fixedWorld;
   String? banner;
   int bannerLife = 0;
@@ -67,26 +64,19 @@ class GameEngine {
   final popups = <Popup>[];
   final rings = <Ring>[];
 
-  bool get chill => mode == GameMode.chill;
   bool get fever => combo >= feverCombo;
 
   // Difficulty curve: speed rises smoothly with both score and time played.
-  double get _base => chill ? 1.6 : 2.0;
-  double get _cap => chill ? 3.2 : 6.5;
-  double get _scoreK => chill ? .02 : .045;
-  double get _timeK => chill ? .004 : .008;
+  static const double _base = 2.0, _cap = 6.5, _scoreK = .045, _timeK = .008;
   void _recalcSpeed() => speed = min(_cap, _base + score * _scoreK + elapsed * _timeK);
 
-  void reset(double w, double h,
-      {bool isVip = false, GameMode mode = GameMode.classic, int? fixedWorld}) {
+  void reset(double w, double h, {bool isVip = false, int? fixedWorld}) {
     width = w;
     height = h;
     vip = isVip;
-    this.mode = mode;
     this.fixedWorld = fixedWorld;
     blocks = [Block((w - startWidth) / 2, startWidth, 0)];
     score = combo = maxCombo = runCoins = runPerfects = 0;
-    lives = chill ? chillLives : 1;
     elapsed = 0;
     camY = 0;
     shake = 0;
@@ -112,7 +102,6 @@ class GameEngine {
   /// Continue after losing (rewarded ad): keeps the tower.
   void revive() {
     over = false;
-    lives = 1;
     _spawn();
   }
 
@@ -168,13 +157,7 @@ class GameEngine {
       falling.add(FallingPiece(cur.x, cur.w, cur.i));
       combo = 0;
       shake = 9;
-      lives--;
-      if (lives <= 0) {
-        over = true;
-      } else {
-        popups.add(Popup(width / 2, cur.i, '$lives ${lives == 1 ? 'life' : 'lives'} left'));
-        _spawn();
-      }
+      over = true;
       return DropResult.miss;
     }
     final perfect = (cur.x - top.x).abs() < perfectTol;

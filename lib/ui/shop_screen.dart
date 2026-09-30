@@ -58,6 +58,7 @@ class _ShopScreenState extends State<ShopScreen> {
           key: Key('world_$id'),
           style: FilledButton.styleFrom(
             padding: EdgeInsets.zero,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             side: sel ? const BorderSide(color: Colors.white, width: 3) : null,
           ),
@@ -68,7 +69,7 @@ class _ShopScreenState extends State<ShopScreen> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(label + (owned ? (sel ? ' ✓' : '') : '  🪙$worldPrice'),
-                    style: const TextStyle(fontWeight: FontWeight.w700, shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, shadows: [Shadow(blurRadius: 4, color: Colors.black87)])),
               ),
             ),
           ),
@@ -117,6 +118,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     key: Key('skin_${s.id}'),
                     style: FilledButton.styleFrom(
                       backgroundColor: HSLColor.fromAHSL(1, s.hue, .8, .4).toColor(),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       side: app.store.skinId == s.id ? const BorderSide(color: Colors.white, width: 3) : null,
                     ),

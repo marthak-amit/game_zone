@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../achievements.dart';
 import '../game/block_painter.dart';
 import '../game/engine.dart';
 import '../game/scenery.dart';
 import '../game/worlds.dart';
 import '../services/app_services.dart';
+import 'confetti.dart';
 import 'widgets.dart';
 
 enum Phase { play, pause, over }
 
 class GameScreen extends StatefulWidget {
-  final GameMode mode;
-  const GameScreen({super.key, this.mode = GameMode.classic});
+  const GameScreen({super.key});
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -22,14 +23,19 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final engine = GameEngine();
   final scenery = Scenery();
-  WorldState _ws = WorldState.at(0);
-  bool _rainOn = false;
+  final confetti = ConfettiController();
   final _frame = FrameTicker();
   late final Ticker _ticker;
   Duration _last = Duration.zero;
   Size? _size;
+  WorldState _ws = WorldState.at(0);
+  bool _rainOn = false;
+  int _musicWorld = -1;
   Phase phase = Phase.play;
-  bool revived = false, newBest = false, doubled = false;
+  bool revived = false, newBest = false, doubled = false, liveCelebrated = false;
+  int prevBest = 0, xpGain = 0, levelsGained = 0;
+  String? _spokenBanner;
+  List<Achievement> unlocked = const [];
   final score = ValueNotifier<int>(0);
 
   @override
@@ -43,6 +49,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     app.audio.setRain(false);
+    app.audio.voice.stop();
     _ticker.dispose();
     super.dispose();
   }
@@ -63,16 +70,27 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _rainOn = wantRain;
       app.audio.setRain(wantRain);
     }
+    final mw = engine.worldPos.round() % worlds.length;
+    if (mw != _musicWorld) {
+      _musicWorld = mw;
+      app.audio.music.setWorld(mw);
+    }
     _frame.ping();
   }
 
   void _start() {
     final s = _size!;
-    engine.reset(s.width, s.height, isVip: app.store.vip, mode: widget.mode, fixedWorld: app.store.fixedWorldIndex);
+    engine.reset(s.width, s.height, isVip: app.store.vip, fixedWorld: app.store.fixedWorldIndex);
     score.value = 0;
     revived = false;
     newBest = false;
     doubled = false;
+    liveCelebrated = false;
+    prevBest = app.store.best;
+    xpGain = 0;
+    levelsGained = 0;
+    unlocked = const [];
+    _spokenBanner = null;
     phase = Phase.play;
   }
 
@@ -83,29 +101,75 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       case DropResult.perfect:
         app.audio.chime(engine.combo - 1);
         app.audio.buzz();
+        _comboVoice(engine.combo);
       case DropResult.good:
         app.audio.beep(330, .1);
         app.audio.buzz(8);
       case DropResult.miss:
-        app.audio.beep(140, .3);
+        app.audio.miss();
         app.audio.buzz(40);
-        if (engine.over) _gameOver();
+        _gameOver();
       case DropResult.none:
     }
     score.value = engine.score;
+    if (r == DropResult.perfect || r == DropResult.good) {
+      _liveBest();
+      _bannerVoice();
+    }
+  }
+
+  void _comboVoice(int combo) {
+    const lines = {3: 'Nice!', 5: 'Fever time!', 8: 'Unstoppable!', 12: 'Incredible!', 16: 'Legendary!'};
+    final l = lines[combo];
+    if (l != null) app.audio.voice.say(l);
+  }
+
+  /// Announce world changes and score milestones once each.
+  void _bannerVoice() {
+    final b = engine.banner;
+    if (b == null || engine.bannerLife <= 0 || b == _spokenBanner) return;
+    _spokenBanner = b;
+    if (b == 'NEW BEST!') return;
+    final isWorld = worlds.any((w) => w.name == b);
+    app.audio.voice.say(isWorld ? 'Welcome to $b' : b, force: true);
+  }
+
+  /// Confetti + cheer the moment the player passes their old best score mid-game.
+  void _liveBest() {
+    if (liveCelebrated || prevBest < 5 || engine.score <= prevBest) return;
+    liveCelebrated = true;
+    engine.banner = 'NEW BEST!';
+    engine.bannerLife = 150;
+    _spokenBanner = 'NEW BEST!';
+    confetti.fire(seconds: 3.5);
+    app.audio.fanfare();
+    app.audio.voice.say('New high score!', force: true);
   }
 
   void _gameOver() {
     final st = app.store;
-    app.audio.beep(120, .4);
-    app.audio.buzz(60);
-    newBest = st.recordGame(engine.score, chill: engine.chill);
+    newBest = st.recordGame(engine.score);
     st.missionEvent('combo', engine.maxCombo);
-    if (engine.chill) st.missionEvent('chill', 1);
+    st.missionEvent('worlds', engine.score);
     st.missionEvent('score', engine.score);
     st.missionEvent('perfect', engine.runPerfects);
     st.missionEvent('games', 1);
     st.addCoins(engine.runCoins);
+    xpGain = 10 + engine.score * 10 + engine.runPerfects * 5;
+    levelsGained = st.addXp(xpGain);
+    unlocked = st.checkAchievements(RunStats(engine.score, engine.maxCombo, engine.runPerfects));
+    if (newBest) {
+      confetti.fire(seconds: 6, density: 2);
+      app.audio.fanfare();
+      app.audio.voice.say(liveCelebrated ? 'Congratulations!' : 'New high score! Congratulations!', force: true);
+    } else if (levelsGained > 0) {
+      app.audio.fanfare();
+      app.audio.voice.say('Level up!', force: true);
+    } else if (unlocked.isNotEmpty) {
+      app.audio.voice.say('Achievement unlocked!', force: true);
+    } else {
+      app.audio.voice.say(engine.score >= 10 ? 'Nice run!' : 'Game over');
+    }
     setState(() => phase = Phase.over);
   }
 
@@ -173,21 +237,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const CoinBadge(),
-                            if (widget.mode == GameMode.chill)
-                              ValueListenableBuilder<int>(
-                                valueListenable: score,
-                                builder: (_, _, _) => Text('❤' * engine.lives.clamp(0, 3), key: const Key('lives'), style: const TextStyle(color: Colors.redAccent, fontSize: 18)),
-                              ),
-                          ]),
+                          const CoinBadge(),
                           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                             ListenableBuilder(
                               listenable: app.store,
-                              builder: (_, _) => Text('Best ${widget.mode == GameMode.chill ? app.store.bestChill : app.store.best}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                              builder: (_, _) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: .3), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white24)),
+                                child: Text('🏆 ${app.store.best}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                              ),
                             ),
                             if (phase == Phase.play)
-                              IconButton(key: const Key('pauseBtn'), icon: const Icon(Icons.pause_circle, size: 34, color: Colors.white70), onPressed: _pause),
+                              IconButton(key: const Key('pauseBtn'), icon: const Icon(Icons.pause_circle, size: 36, color: Colors.white70), onPressed: _pause),
                           ]),
                         ]),
                       ),
@@ -199,16 +260,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           child: ValueListenableBuilder<int>(
                             valueListenable: score,
                             builder: (_, v, _) => Text('$v', key: const Key('score'),
-                                style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w800, shadows: [Shadow(blurRadius: 8, color: Colors.black54)])),
+                                style: const TextStyle(fontSize: 68, fontWeight: FontWeight.w900, shadows: [Shadow(blurRadius: 10, color: Colors.black54)])),
                           ),
                         ),
                       ),
                     if (phase == Phase.pause) _panel([
                       const Text('Paused', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 8),
                       BigButton('▶ Resume', () => setState(() => phase = Phase.play), color: kGreen),
                       BigButton('🏠 Quit to menu', () => Navigator.pop(context), color: kGrey),
                     ]),
                     if (phase == Phase.over) _overPanel(),
+                    Positioned.fill(child: Confetti(controller: confetti)),
                   ]);
                 }),
               ),
@@ -226,24 +289,66 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         ),
       );
 
-  Widget _overPanel() => _panel([
-        Text(widget.mode == GameMode.chill ? 'Chill Over' : 'Game Over', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
-        if (newBest) const Text('🏆 NEW BEST!', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w800, fontSize: 22)),
+  Widget _chip(String t, Color c) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(color: c.withValues(alpha: .25), borderRadius: BorderRadius.circular(20), border: Border.all(color: c)),
+        child: Text(t, style: const TextStyle(fontWeight: FontWeight.w800)),
+      );
+
+  Widget _overPanel() {
+    final st = app.store;
+    final coinsShown = engine.runCoins * (doubled ? 2 : 1);
+    return _panel([
+      TweenAnimationBuilder<double>(
+        tween: Tween(begin: .6, end: 1),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.elasticOut,
+        builder: (_, v, child) => Transform.scale(scale: v, child: child),
+        child: Text(newBest ? '🏆 NEW BEST!' : 'Game Over',
+            style: TextStyle(fontSize: newBest ? 38 : 34, fontWeight: FontWeight.w900, color: newBest ? Colors.amber : Colors.white, shadows: const [Shadow(blurRadius: 12, color: Colors.black54)])),
+      ),
+      TweenAnimationBuilder<int>(
+        tween: IntTween(begin: 0, end: engine.score),
+        duration: Duration(milliseconds: 400 + engine.score * 25),
+        builder: (_, v, _) => Text('$v', key: const Key('finalScore'), style: const TextStyle(fontSize: 76, fontWeight: FontWeight.w900, height: 1.05, shadows: [Shadow(blurRadius: 14, color: Colors.black54)])),
+      ),
+      Row(mainAxisSize: MainAxisSize.min, key: const Key('finalText'), children: [
+        _chip('🪙 +$coinsShown', Colors.amber),
+        _chip('⭐ +$xpGain XP', const Color(0xFF5BE7A9)),
+      ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(40, 12, 40, 4),
+        child: Column(children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Lv ${st.level} · ${st.title}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            Text('${st.xpInLevel}/${st.xpNeeded}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          ]),
+          const SizedBox(height: 4),
+          XpBar(value: st.xpInLevel / st.xpNeeded, height: 9),
+        ]),
+      ),
+      if (levelsGained > 0)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text.rich(TextSpan(style: const TextStyle(fontSize: 22), children: [
-            const TextSpan(text: 'Score '),
-            TextSpan(text: '${engine.score}', style: const TextStyle(fontWeight: FontWeight.w900)),
-            const TextSpan(text: '  ·  +🪙'),
-            TextSpan(text: '${engine.runCoins * (doubled ? 2 : 1)}', style: const TextStyle(fontWeight: FontWeight.w900)),
-          ]), key: const Key('finalText')),
+          padding: const EdgeInsets.only(top: 4),
+          child: Text('⬆ LEVEL UP!  Bonus 🪙${50 * st.level}', key: const Key('levelUp'), style: const TextStyle(color: Color(0xFF5BE7A9), fontWeight: FontWeight.w900, fontSize: 16)),
         ),
-        if (!revived && engine.score >= 3) BigButton('📺 Continue (watch ad)', _revive, color: kGold, textColor: Colors.black),
-        if (engine.runCoins > 0) BigButton('📺 Double coins', doubled ? null : _double, color: kGreen),
-        BigButton('↻ Play again', _again),
-        BigButton('📤 Share score', () => SharePlus.instance.share(ShareParams(text: 'I stacked ${engine.score} blocks in Sky Stack! Can you beat me?')), color: kGrey),
-        BigButton('🏠 Menu', () => Navigator.pop(context), color: kGrey),
-      ]);
+      for (final a in unlocked)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text('${a.icon} Achievement: ${a.title}  +🪙${a.reward}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w800)),
+        ),
+      const SizedBox(height: 8),
+      if (!revived && engine.score >= 3) BigButton('📺 Continue (watch ad)', _revive, color: kGold, textColor: Colors.black),
+      if (engine.runCoins > 0) BigButton('📺 Double coins', doubled ? null : _double, color: kGreen),
+      BigButton('↻ Play again', _again),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        BigButton('📤 Share', () => SharePlus.instance.share(ShareParams(text: 'I stacked ${engine.score} blocks in Sky Stack! Can you beat me?')), color: kGrey, width: 136, height: 46),
+        const SizedBox(width: 8),
+        BigButton('🏠 Menu', () => Navigator.pop(context), color: kGrey, width: 136, height: 46),
+      ]),
+    ]);
+  }
 }
 
 /// Repaint trigger driven by the ticker.
