@@ -5,12 +5,13 @@ on:
     paths: ['lib/**', 'android/**', 'pubspec.yaml', 'scripts/**', '.github/workflows/android-smoke.yml']
 jobs:
   smoke:
-    name: smoke (${{ matrix.variant }})
+    name: smoke (${{ matrix.variant }}, impeller ${{ matrix.impeller }})
     strategy:
       fail-fast: false
       matrix:
         # diagnostic builds that each switch one feature family off (real app = 'full')
-        variant: [blank, full]
+        variant: [full, lite]
+        impeller: [off]
     env:
       VARIANT: ${{ matrix.variant }}
     runs-on: ubuntu-latest
@@ -26,6 +27,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: flutter pub get
+      - name: Turn Impeller off (emulator software Vulkan is a suspect)
+        if: matrix.impeller == 'off'
+        run: sed -i 's#<application#<application#; /<activity/i\        <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />' android/app/src/main/AndroidManifest.xml && grep -n Impeller android/app/src/main/AndroidManifest.xml
       - run: flutter build apk --release --dart-define=VARIANT=${{ matrix.variant }}
       - name: Free memory before starting the emulator
         run: |
@@ -44,7 +48,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: smoke-${{ matrix.variant }}
+          name: smoke-${{ matrix.variant }}-${{ matrix.impeller }}
           path: |
             smoke_*.png
             smoke_logcat.txt
