@@ -3,12 +3,18 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'music.dart';
+import 'sfx_player.dart';
 
 /// Synthesized sound effects (no asset files needed) + haptics.
 /// Perfect drops play a rising pentatonic scale so a streak sounds like a soothing melody.
 class Audio {
+  Audio({SfxPlayer? sfx, Music? music})
+      : _sfxPlayer = sfx ?? SfxPlayer(),
+        music = music ?? Music();
+
   bool soundOn = true, vibeOn = true;
-  final music = Music();
+  final Music music;
+  final SfxPlayer _sfxPlayer;
 
   /// Set false in tests / unsupported platforms to disable all sound plugins.
   bool _available = true;
@@ -89,23 +95,17 @@ class Audio {
 
   void beep(double freq, [double seconds = .12]) {
     if (!soundOn || !_available) return;
-    _play(_cache.putIfAbsent('b$freq-$seconds', () => _tone(freq, seconds)));
+    _sfxPlayer.playPooled('b$freq-$seconds', () => _bytes('b$freq-$seconds', () => _tone(freq, seconds)), .7);
   }
 
   /// Gentle chime climbing the pentatonic scale with [step] (combo count).
   void chime(int step) {
     if (!soundOn || !_available) return;
-    final f = _pentatonic[step.clamp(0, _pentatonic.length - 1)];
-    _play(_cache.putIfAbsent('c$f', () => _tone(f, .7, soft: true)));
+    final f = _pentatonic[step.clamp(0, 6)]; // 7 notes => at most 7 preloaded pools
+    _sfxPlayer.playPooled('c$f', () => _bytes('c$f', () => _tone(f, .7, soft: true)), .7);
   }
 
-  Future<void> _play(Uint8List bytes, {double volume = .7}) async {
-    try {
-      final p = AudioPlayer();
-      p.onPlayerComplete.first.then((_) => p.dispose());
-      await p.play(BytesSource(bytes), volume: volume);
-    } catch (_) {/* audio is best-effort */}
-  }
+  Uint8List _bytes(String key, Uint8List Function() build) => _cache.putIfAbsent(key, build);
 
   /// Start/stop the rain ambience.
   Future<void> setRain(bool on) async {
@@ -312,12 +312,14 @@ class Audio {
     return _finish(out, .4);
   }
 
-  void _sfx(String key, Uint8List Function() build, [double volume = .8]) {
+  /// Frequent effects use preloaded pools; rare/long ones share a few players (bounded native resources).
+  void _sfx(String key, Uint8List Function() build, [double volume = .8, bool pooled = false]) {
     if (!soundOn || !_available) return;
-    _play(_cache.putIfAbsent(key, build), volume: volume);
+    Uint8List bytes() => _bytes(key, build);
+    pooled ? _sfxPlayer.playPooled(key, bytes, volume) : _sfxPlayer.playShared(key, bytes, volume);
   }
 
-  void thud({bool perfect = false}) => _sfx(perfect ? 'thudP' : 'thud', () => buildThud(perfect: perfect), .9);
+  void thud({bool perfect = false}) => _sfx(perfect ? 'thudP' : 'thud', () => buildThud(perfect: perfect), .9, true);
   void gameOver() => _sfx('over', buildGameOver, .85);
   void startRound() => _sfx('start', buildStart, .8);
   void applause({bool long = true}) => _sfx(long ? 'clap' : 'clapS', () => buildApplause(seconds: long ? 3.4 : 2.2), 1.0);
@@ -325,7 +327,7 @@ class Audio {
   void whoosh() => _sfx('whoosh', buildWhoosh, .55);
   void ding() => _sfx('ding', buildDing, .8);
   void fanfare() => _sfx('fanfare', buildFanfare, .8);
-  void click() => _sfx('click', buildClick, .5);
+  void click() => _sfx('click', buildClick, .5, true);
   void miss() => gameOver();
 
   void buzz([int ms = 10]) {

@@ -35,6 +35,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool revived = false, newBest = false, doubled = false, liveCelebrated = false;
   int prevBest = 0, xpGain = 0, levelsGained = 0;
   String? _spokenBanner;
+  bool _busy = false; // blocks double taps while an ad / next round is being set up
   Duration _now = Duration.zero, _readyAt = Duration.zero;
   bool get _ready => _now >= _readyAt;
   List<Achievement> unlocked = const [];
@@ -190,25 +191,45 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _revive() async {
-    if (await app.rewarded(context, 'revive') && mounted) {
-      revived = true;
-      app.store.addCoins(-engine.runCoins);
-      engine.revive();
-      app.audio.music.duck(false);
-      _readyAt = _now + const Duration(milliseconds: 900);
-      setState(() => phase = Phase.play);
+    if (_busy) return;
+    _busy = true;
+    try {
+      if (await app.rewarded(context, 'revive') && mounted) {
+        revived = true;
+        app.store.addCoins(-engine.runCoins);
+        engine.revive();
+        app.audio.music.duck(false);
+        _readyAt = _now + const Duration(milliseconds: 900);
+        setState(() => phase = Phase.play);
+      }
+    } finally {
+      _busy = false;
     }
   }
 
   Future<void> _double() async {
-    if (await app.rewarded(context, 'double_coins') && mounted) {
-      app.store.addCoins(engine.runCoins);
-      setState(() => doubled = true);
+    if (_busy) return;
+    _busy = true;
+    try {
+      if (await app.rewarded(context, 'double_coins') && mounted) {
+        app.store.addCoins(engine.runCoins);
+        setState(() => doubled = true);
+      }
+    } finally {
+      _busy = false;
     }
   }
 
   Future<void> _again() async {
-    await app.maybeInterstitial(context);
+    if (_busy) return;
+    _busy = true;
+    try {
+      await app.maybeInterstitial(context); // has its own timeout
+    } catch (_) {
+      // never let an ad problem stop the next round
+    } finally {
+      _busy = false;
+    }
     if (mounted) setState(_start);
   }
 
@@ -410,8 +431,11 @@ class GamePainter extends CustomPainter {
     }
     scenery.paint(canvas, size, ws(), e.camY);
 
+    // Only draw blocks that are on screen - a tall tower must not slow the game down.
     for (final b in e.blocks) {
-      drawBlock(canvas, b.x, e.yOf(b.i), b.w, GameEngine.blockH, GameEngine.colorFor(skin, b.i));
+      final y = e.yOf(b.i);
+      if (y > size.height || y < -GameEngine.blockH) continue;
+      drawBlock(canvas, b.x, y, b.w, GameEngine.blockH, GameEngine.colorFor(skin, b.i));
     }
     if (!e.over) {
       _guides(canvas);

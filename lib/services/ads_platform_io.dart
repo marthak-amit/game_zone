@@ -61,7 +61,7 @@ class AdMobService implements AdService {
       },
     );
     ad.show(onUserEarnedReward: (_, _) => earned = true);
-    return result.future;
+    return result.future.timeout(const Duration(seconds: 120), onTimeout: () => earned);
   }
 
   @override
@@ -90,6 +90,6 @@ class AdMobService implements AdService {
       },
     );
     ad.show();
-    await done.future;
+    await done.future.timeout(const Duration(seconds: 60), onTimeout: () {});
   }
 }

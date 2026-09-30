@@ -36,7 +36,8 @@ class AppServices {
   }
 
   /// Watch a rewarded ad; true if the reward was earned.
-  Future<bool> rewarded(BuildContext context, String reason) => ads.showRewarded(context, reason);
+  Future<bool> rewarded(BuildContext context, String reason) =>
+      ads.showRewarded(context, reason).timeout(const Duration(seconds: 120), onTimeout: () => false).catchError((_) => false);
 
   /// Called when a round ends and the player starts another. Frequency-capped; skipped for payers.
   Future<void> maybeInterstitial(BuildContext context) async {
@@ -49,7 +50,10 @@ class AppServices {
     }
     _gamesSinceInterstitial = 0;
     _lastInterstitial = now;
-    await ads.showInterstitial(context);
+    try {
+      // An ad must never be able to freeze the game flow.
+      await ads.showInterstitial(context).timeout(const Duration(seconds: 45));
+    } catch (_) {}
   }
 
   Future<void> buy(BuildContext context, String sku) => iap.buy(context, sku);

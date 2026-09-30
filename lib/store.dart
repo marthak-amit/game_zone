@@ -84,6 +84,13 @@ class Store extends ChangeNotifier {
   void setSound(bool v) => _set('sound', v);
   void setVibe(bool v) => _set('vibe', v);
   void setMusic(bool v) => _set('music', v);
+  /// True while any sound (music or effects) is on.
+  bool get anySound => music || sound;
+  /// Master switch: turns music and effects on or off together.
+  void setAllSound(bool on) {
+    _p.setBool('music', on);
+    _set('sound', on);
+  }
   void setNoAds() => _set('noAds', true);
   void setVip() {
     _p.setBool('vip', true);

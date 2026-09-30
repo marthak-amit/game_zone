@@ -7,6 +7,7 @@ rewarded ads, interstitials and in-app purchases.
 **Worlds:** six animated backgrounds that blend as your tower grows — Morning Sky, Golden Hour, Starry Night (moon, shooting stars),
 Rain Storm (rain, lightning, rain sound), Aurora, Deep Space (planet). Parallax city skyline with lit windows.
 **Pace:** speed rises smoothly with both score and time.
+**Audio (kid-friendly):** cheerful major-key tunes with short repeating melodies on xylophone / marimba / music-box / glockenspiel, bouncy bass and a soft shaker; a lullaby for the night worlds.
 **Audio:** all generated in code (no audio files): separate ambient music for the home screen and for each of the six worlds (cross-fades as you climb), a start-of-round sting, a landing thud on every block (brighter + chime on PERFECT), a game-over sound, rain ambience in the storm, and crowd applause + fanfare for a new high score. No spoken voice. Music and effects have separate switches.
 **Celebrations:** confetti, stars and hearts rain from the top the moment you beat your best, plus a fanfare and a bigger shower on the game-over card.
 **Progression:** XP + levels with coin rewards, 12 achievements, daily lucky wheel (free spin + ad spins), daily streak, daily missions.
@@ -63,3 +64,10 @@ keyAlias=upload
 ```
 Then `flutter build appbundle --release` and upload `build/app/outputs/bundle/release/app-release.aab`.
 Keep the .jks file and passwords safe — losing them means you can't update the app.
+
+## Performance & reliability notes
+* Sound effects use a **bounded** set of native players (pooled + round-robin, throttled) instead of one per sound.
+* Music runs on a single player that is destroyed when turned off; a track that finishes loading afterwards is killed (unit-tested race conditions).
+* Every ad wait has a timeout and Play again / Continue / Double are guarded against double taps, so an unresponsive ad can never freeze the game.
+* Only on-screen blocks are drawn; blocks use flat overlays instead of per-block shaders.
+* `test/stress_test.dart` plays 12 games in a row with the real sound code and checks the native player counts stay constant.

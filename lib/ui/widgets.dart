@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../game/engine.dart';
 import '../game/scenery.dart';
 import '../services/app_services.dart';
+import 'anim_widgets.dart';
+export 'anim_widgets.dart';
 import 'level_screen.dart';
 
 /// Animated world background (slowly cycles through all worlds) used on menus.
@@ -130,56 +132,25 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
       );
 }
 
-/// Square glass tile used in the menu grid.
-class MenuCard extends StatelessWidget {
-  final String icon, label;
-  final VoidCallback onTap;
-  final String? badge;
-  const MenuCard(this.icon, this.label, this.onTap, {super.key, this.badge});
-  @override
-  Widget build(BuildContext context) => Stack(clipBehavior: Clip.none, children: [
-        Material(
-          color: Colors.black.withValues(alpha: .32),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: Colors.white.withValues(alpha: .3))),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              app.audio.click();
-              onTap();
-            },
-            child: SizedBox(
-              width: 100,
-              height: 78,
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(icon, style: const TextStyle(fontSize: 28)),
-                const SizedBox(height: 4),
-                FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-              ]),
-            ),
-          ),
-        ),
-        if (badge != null)
-          Positioned(
-            right: -4,
-            top: -6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white, width: 1.5)),
-              child: Text(badge!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
-            ),
-          ),
-      ]);
-}
-
 class CoinBadge extends StatelessWidget {
   const CoinBadge({super.key});
   @override
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: app.store,
         builder: (_, _) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(color: Colors.black.withValues(alpha: .3), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white24)),
-          child: Text('🪙 ${app.store.coins}', key: const Key('coins'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          padding: const EdgeInsets.fromLTRB(8, 5, 14, 5),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: .42), borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.white30)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const SpinningCoin(size: 26),
+            const SizedBox(width: 7),
+            // counts up/down smoothly whenever the balance changes
+            TweenAnimationBuilder<int>(
+              tween: IntTween(end: app.store.coins),
+              duration: const Duration(milliseconds: 650),
+              curve: Curves.easeOut,
+              builder: (_, v, _) => Text('$v', key: const Key('coins'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            ),
+          ]),
         ),
       );
 }
@@ -311,10 +282,22 @@ BoxDecoration cardDecoration({Color? border, Color? color}) => BoxDecoration(
       border: Border.all(color: border ?? Colors.white.withValues(alpha: .14)),
     );
 
-/// Big rounded PLAY button with a vector play icon.
-class PlayButton extends StatelessWidget {
+/// Big rounded PLAY button: vector play icon, glow, pulse and a light shine that sweeps across.
+class PlayButton extends StatefulWidget {
   final VoidCallback onPressed;
   const PlayButton({super.key, required this.onPressed});
+  @override
+  State<PlayButton> createState() => _PlayButtonState();
+}
+
+class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat();
+  @override
+  void dispose() {
+    _shine.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Pulse(
         child: Container(
@@ -326,26 +309,49 @@ class PlayButton extends StatelessWidget {
             border: Border.all(color: Colors.white.withValues(alpha: .55), width: 2),
             boxShadow: [BoxShadow(color: const Color(0xFF22C55E).withValues(alpha: .6), blurRadius: 22, spreadRadius: 1, offset: const Offset(0, 4))],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              key: const Key('playButton'),
-              borderRadius: BorderRadius.circular(40),
-              onTap: () {
-                app.audio.click();
-                onPressed();
-              },
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]),
-                  child: const Icon(Icons.play_arrow_rounded, size: 44, color: Color(0xFF15803D)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(38),
+            child: Stack(children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _shine,
+                    builder: (_, _) {
+                      final t = (_shine.value / .45).clamp(0.0, 1.0); // sweep during the first 45% of each cycle
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment(-2.2 + 4.4 * t, -.4),
+                            end: Alignment(-1.2 + 4.4 * t, .4),
+                            colors: [Colors.white.withValues(alpha: 0), Colors.white.withValues(alpha: .38), Colors.white.withValues(alpha: 0)],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-                const SizedBox(width: 14),
-                const Text('PLAY', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 3, shadows: [Shadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))])),
-              ]),
-            ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  key: const Key('playButton'),
+                  onTap: () {
+                    app.audio.click();
+                    widget.onPressed();
+                  },
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]),
+                      child: const Icon(Icons.play_arrow_rounded, size: 44, color: Color(0xFF15803D)),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text('PLAY', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 3, shadows: [Shadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))])),
+                  ]),
+                ),
+              ),
+            ]),
           ),
         ),
       );

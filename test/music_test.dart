@@ -14,7 +14,7 @@ void main() {
       final bd = wav.buffer.asByteData();
       final s = List<int>.generate(n, (i) => bd.getInt16(44 + i * 2, Endian.little));
       final seconds = n / 16000;
-      expect(seconds, inInclusiveRange(20, 40), reason: 'world $w loop length');
+      expect(seconds, inInclusiveRange(12, 40), reason: 'track $w loop length');
       final peak = s.map((e) => e.abs()).reduce(max);
       expect(peak, inInclusiveRange(15000, 32767), reason: 'world $w level');
       final rms = sqrt(s.map((e) => e * e).reduce((a, b) => a + b) / n);
@@ -26,6 +26,16 @@ void main() {
         maxStep = max(maxStep, (s[i] - s[i - 1]).abs());
       }
       expect(seam, lessThanOrEqualTo(maxStep * 2 + 200), reason: 'world $w loop seam');
+      // ignore: avoid_print
+      // children's-song structure: the tune repeats (first half ~ second half) so it is easy to hum along to
+      final half = n ~/ 2;
+      var dot = 0.0, a2 = 0.0, b2 = 0.0;
+      for (var i = 0; i < half; i++) {
+        dot += s[i] * s[half + i];
+        a2 += s[i] * s[i];
+        b2 += s[half + i] * s[half + i];
+      }
+      expect(dot / sqrt(a2 * b2), greaterThan(.55), reason: 'track $w repeats its tune');
       // ignore: avoid_print
       print('world $w: ${seconds.toStringAsFixed(1)}s peak=$peak rms=${rms.round()} seam=$seam maxStep=$maxStep gen=${sw.elapsedMilliseconds}ms');
     }

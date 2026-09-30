@@ -7,6 +7,7 @@ import 'package:sky_stack/services/ads.dart';
 import 'package:sky_stack/services/audio.dart';
 import 'package:sky_stack/services/music.dart';
 import 'package:sky_stack/ui/level_screen.dart';
+import 'package:sky_stack/ui/widgets.dart';
 import 'package:sky_stack/services/app_services.dart';
 import 'package:sky_stack/services/iap.dart';
 import 'package:sky_stack/store.dart';
@@ -108,14 +109,14 @@ void main() {
   testWidgets('menu shows and daily reward + double works', (t) async {
     await boot(t);
     expect(find.text('SKY STACK'), findsOneWidget);
-    await t.tap(find.textContaining('Daily reward'));
+    await t.tap(find.byKey(const Key('tile_daily')));
     await settle(t);
     expect(app.store.coins, 50);
     await t.tap(find.byKey(const Key('doubleDaily')));
     await settle(t);
     expect(app.store.coins, 100);
     expect(ads.rewardedCalls, 1);
-    expect(find.textContaining('Daily reward'), findsNothing);
+    expect(find.byKey(const Key('tile_daily')), findsNothing);
   });
 
   testWidgets('play a round to game over, coins + best saved, revive, replay, menu', (t) async {
@@ -226,7 +227,7 @@ void main() {
 
   testWidgets('settings toggles persist to store', (t) async {
     await boot(t);
-    await t.tap(find.text('Settings'));
+    await t.tap(find.byKey(const Key('settingsBtn')));
     await settle(t);
     await t.tap(find.byKey(const Key('soundSwitch')));
     await t.pump();
@@ -238,19 +239,92 @@ void main() {
     expect(app.audio.music.enabled, isFalse);
   });
 
-  testWidgets('menu shows level chip, best score and all feature tiles', (t) async {
+  testWidgets('home screen is simple: one big PLAY, one row of 5 tiles, two corner buttons - nothing else', (t) async {
     await boot(t);
+    await settle(t);
     expect(find.byKey(const Key('levelChip')), findsOneWidget);
     expect(find.text('Rookie'), findsOneWidget);
-    for (final label in ['Lucky Wheel', 'Missions', 'Achievements', 'Shop', 'Free coins', 'Settings']) {
-      expect(find.text(label), findsOneWidget, reason: label);
+    expect(find.byKey(const Key('playButton')), findsOneWidget);
+    for (final k in ['tile_daily', 'tile_wheel', 'tile_missions', 'tile_trophies', 'tile_shop', 'soundBtn', 'settingsBtn']) {
+      expect(find.byKey(Key(k)), findsOneWidget, reason: k);
     }
     expect(find.text('FREE'), findsOneWidget); // free daily spin badge
+    // clutter that used to be on the home screen now lives in the Shop / Settings
+    expect(find.textContaining('Remove Ads'), findsNothing);
+    expect(find.textContaining('Free coins'), findsNothing);
+    expect(find.byKey(const Key('tip')), findsNothing);
+  });
+
+  testWidgets('there is clear space between PLAY and the secondary tiles, and nothing overlaps', (t) async {
+    await boot(t);
+    await settle(t);
+    final play = t.getRect(find.byKey(const Key('playButton')));
+    final tile = t.getRect(find.byKey(const Key('tile_wheel')));
+    expect(tile.top - play.bottom, greaterThanOrEqualTo(24), reason: 'breathing room under the PLAY button');
+    final best = t.getRect(find.byKey(const Key('best')));
+    expect(play.top - best.bottom, greaterThanOrEqualTo(16));
+  });
+
+  testWidgets('home layout never moves (no shifting content)', (t) async {
+    await boot(t);
+    await settle(t);
+    final p0 = t.getCenter(find.byKey(const Key('playButton')));
+    final w0 = t.getCenter(find.byKey(const Key('tile_wheel')));
+    for (var i = 0; i < 6; i++) {
+      await t.pump(const Duration(seconds: 7));
+      expect((t.getCenter(find.byKey(const Key('playButton'))) - p0).distance, lessThan(.5));
+      expect((t.getCenter(find.byKey(const Key('tile_wheel'))) - w0).distance, lessThan(.5));
+    }
+  });
+
+  testWidgets('sound button mutes everything (music + effects) and unmutes', (t) async {
+    await boot(t);
+    expect(app.store.anySound, isTrue);
+    await t.tap(find.byKey(const Key('soundBtn')));
+    await t.pump();
+    expect(app.store.music, isFalse);
+    expect(app.store.sound, isFalse);
+    expect(app.audio.music.enabled, isFalse);
+    expect(app.audio.soundOn, isFalse);
+    expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+    await t.tap(find.byKey(const Key('soundBtn')));
+    await t.pump();
+    expect(app.store.music && app.store.sound, isTrue);
+    expect(app.audio.music.enabled, isTrue);
+    expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+  });
+
+  testWidgets('settings Music switch really turns the music engine off', (t) async {
+    await boot(t);
+    await t.tap(find.byKey(const Key('settingsBtn')));
+    await settle(t);
+    expect(app.audio.music.enabled, isTrue);
+    await t.tap(find.byKey(const Key('musicSwitch')));
+    await t.pump();
+    expect(app.audio.music.enabled, isFalse);
+    expect(app.store.music, isFalse);
+    await t.tap(find.byKey(const Key('musicSwitch')));
+    await t.pump();
+    expect(app.audio.music.enabled, isTrue);
+  });
+
+  testWidgets('coin badge has a spinning coin and counts up when coins are earned', (t) async {
+    await boot(t, prefs: {'coins': 100});
+    await settle(t);
+    expect(find.byType(SpinningCoin), findsWidgets);
+    expect(find.text('100'), findsOneWidget);
+    app.store.addCoins(250);
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 300));
+    final mid = int.parse((t.widget(find.byKey(const Key('coins'))) as Text).data!);
+    expect(mid, inExclusiveRange(100, 350), reason: 'number is animating between old and new value');
+    await t.pump(const Duration(seconds: 1));
+    expect(find.text('350'), findsOneWidget);
   });
 
   testWidgets('lucky wheel: free spin pays a prize once a day', (t) async {
     await boot(t);
-    await t.tap(find.text('Lucky Wheel'));
+    await t.tap(find.byKey(const Key('tile_wheel')));
     await settle(t);
     expect(app.store.freeSpinAvailable, isTrue);
     await t.tap(find.textContaining('SPIN (free)'));
@@ -270,7 +344,7 @@ void main() {
   testWidgets('achievements screen lists all and reflects unlocks', (t) async {
     await boot(t);
     app.store.checkAchievements(const RunStats(30, 6, 12));
-    await t.tap(find.text('Achievements'));
+    await t.tap(find.byKey(const Key('tile_trophies')));
     await settle(t);
     expect(find.byKey(const Key('achCount')), findsOneWidget);
     expect(app.store.achievementsUnlocked, greaterThanOrEqualTo(4));
@@ -395,21 +469,6 @@ void main() {
     await t.tap(find.byKey(const Key('back')));
     await settle(t);
     expect(find.byType(LevelScreen), findsNothing);
-  });
-
-  testWidgets('menu layout does not move when the tip text changes', (t) async {
-    await boot(t);
-    final playPos = t.getCenter(find.byKey(const Key('playButton')));
-    final tilePos = t.getCenter(find.text('Shop'));
-    final seen = <String>{};
-    for (var i = 0; i < 8; i++) {
-      await t.pump(const Duration(seconds: 6, milliseconds: 100)); // tip rotates every 6 s
-      await t.pump(const Duration(milliseconds: 600));
-      seen.add((t.widget(find.byKey(const Key('tip'))) as Text).data!);
-      expect((t.getCenter(find.byKey(const Key('playButton'))) - playPos).distance, lessThan(.5), reason: 'PLAY moved when tip changed');
-      expect((t.getCenter(find.text('Shop')) - tilePos).distance, lessThan(.5), reason: 'tiles moved when tip changed');
-    }
-    expect(seen.length, greaterThan(3), reason: 'tips should actually change');
   });
 
   testWidgets('menus play the home music; the game plays a world track; back to menu returns to home', (t) async {
