@@ -40,3 +40,17 @@ GitHub Actions (`.github/workflows/flutter.yml`) runs analyze + tests and produc
 $10K/month needs roughly 50–150K daily players. Drive traffic with daily TikTok/Reels/Shorts gameplay clips,
 test paid installs with $200–500 (scale only if CPI < ~$0.40 and day-1 retention > 35%), and reuse this
 monetization layer for more small games. No result is guaranteed.
+
+## Release signing (Play Store)
+```
+keytool -genkey -v -keystore ~/upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+Create `android/key.properties` (git-ignored):
+```
+storeFile=/home/you/upload.jks
+storePassword=****
+keyPassword=****
+keyAlias=upload
+```
+Then `flutter build appbundle --release` and upload `build/app/outputs/bundle/release/app-release.aab`.
+Keep the .jks file and passwords safe — losing them means you can't update the app.
