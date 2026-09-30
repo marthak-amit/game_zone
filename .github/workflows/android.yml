@@ -10,7 +10,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - run: npm install
-      - run: npx cap add android || true
+      - run: npx cap add android && ./scripts/setup-android.sh
       - run: npm run android:apk
       - uses: actions/upload-artifact@v4
         with: { name: sky-stack-debug-apk, path: android/app/build/outputs/apk/debug/*.apk }

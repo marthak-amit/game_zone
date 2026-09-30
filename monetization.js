@@ -10,7 +10,14 @@
   const AdMob = native ? window.Capacitor.Plugins.AdMob : null;
   const N = C.native || {};
   const testing = C.mode !== "live";
-  if (AdMob) AdMob.initialize({ initializeForTesting: testing }).catch(() => {});
+  // Initialise AdMob after the GDPR/UMP consent flow (required for EEA/UK users)
+  const adsReady = AdMob ? (async () => {
+    try {
+      const info = await AdMob.requestConsentInfo();
+      if (info.isConsentFormAvailable && info.status === "REQUIRED") await AdMob.showConsentForm();
+    } catch (e) {}
+    try { await AdMob.initialize({ initializeForTesting: testing }); } catch (e) {}
+  })() : Promise.resolve();
   // In-app purchases via cordova-plugin-purchase (Google Play / App Store); initialised lazily
   let iapReady = false;
   function initIAP() {
@@ -51,6 +58,7 @@
     async showRewarded(reason) {
       if (AdMob) {
         try {
+          await adsReady;
           await AdMob.prepareRewardVideoAd({ adId: N.rewardedId, isTesting: testing });
           let rewarded = false;
           const h = await AdMob.addListener("onRewardedVideoAdReward", () => { rewarded = true; });
@@ -80,7 +88,7 @@
       const now = Date.now();
       if (gamesSince < C.interstitialEveryNGames || now - lastInterstitial < C.interstitialMinSeconds * 1000) return;
       gamesSince = 0; lastInterstitial = now;
-      if (AdMob) { try { await AdMob.prepareInterstitial({ adId: N.interstitialId, isTesting: testing }); await AdMob.showInterstitial(); } catch (e) {} return; }
+      if (AdMob) { try { await adsReady; await AdMob.prepareInterstitial({ adId: N.interstitialId, isTesting: testing }); await AdMob.showInterstitial(); } catch (e) {} return; }
       if (C.mode === "demo") return demoAd("Interstitial", 2);
       if (window.adBreak) return new Promise(res => window.adBreak({ type: "next", name: "gameover", adBreakDone: res }));
     },

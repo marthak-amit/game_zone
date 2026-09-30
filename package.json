@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rm -rf www && mkdir www && cp index.html config.js monetization.js game.js manifest.json sw.js icon.svg www/",
-    "android:add": "npm run build && npx cap add android",
+    "build": "rm -rf www && mkdir www && cp index.html config.js monetization.js game.js manifest.json sw.js icon.svg privacy.html www/",
+    "android:add": "npm run build && npx cap add android && ./scripts/setup-android.sh",
     "ios:add": "npm run build && npx cap add ios",
     "sync": "npm run build && npx cap sync",
     "android:apk": "npm run sync && cd android && ./gradlew assembleDebug",
