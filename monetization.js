@@ -11,8 +11,11 @@
   const N = C.native || {};
   const testing = C.mode !== "live";
   if (AdMob) AdMob.initialize({ initializeForTesting: testing }).catch(() => {});
-  // In-app purchases via cordova-plugin-purchase (Google Play / App Store)
-  if (native && window.CdvPurchase) {
+  // In-app purchases via cordova-plugin-purchase (Google Play / App Store); initialised lazily
+  let iapReady = false;
+  function initIAP() {
+    if (iapReady || !native || !window.CdvPurchase) return iapReady;
+    iapReady = true;
     const { store: P, ProductType, Platform } = window.CdvPurchase;
     const plat = window.Capacitor.getPlatform() === "ios" ? Platform.APPLE_APPSTORE : Platform.GOOGLE_PLAY;
     P.register(Object.entries(C.products).map(([sku, id]) => ({ id, type: sku.startsWith("coins") ? ProductType.CONSUMABLE : ProductType.NON_CONSUMABLE, platform: plat })));
@@ -22,7 +25,10 @@
       r.finish();
     });
     P.initialize([plat]);
+    return true;
   }
+  document.addEventListener("deviceready", initIAP);
+  setTimeout(initIAP, 1500);
 
 
   function demoAd(label, seconds) {
@@ -30,7 +36,7 @@
       const o = document.getElementById("adOverlay");
       const t = document.getElementById("adText");
       const b = document.getElementById("adClose");
-      o.style.display = "flex"; b.disabled = true;
+      o.style.display = "flex"; b.disabled = true; b.textContent = "Please wait…";
       let s = seconds;
       const tick = () => { t.textContent = label + " (demo ad) — " + s + "s"; if (s-- <= 0) { b.disabled = false; b.textContent = "Close ✕"; } else setTimeout(tick, 1000); };
       tick();
@@ -80,7 +86,7 @@
     },
     // Purchases. Returns true when granted.
     async purchase(sku) {
-      if (native && window.CdvPurchase) {
+      if (native && initIAP()) {
         const P = window.CdvPurchase.store, id = C.products[sku];
         const offer = P.get(id) && P.get(id).getOffer();
         if (offer) offer.order();

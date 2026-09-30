@@ -1,1 +1,1 @@
-{"name":"Sky Stack","short_name":"SkyStack","start_url":"index.html","display":"fullscreen","orientation":"portrait","background_color":"#0b1020","theme_color":"#0b1020","icons":[]}
+{"name":"Sky Stack","short_name":"SkyStack","start_url":"index.html","display":"fullscreen","orientation":"portrait","background_color":"#0b1020","theme_color":"#0b1020","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]}

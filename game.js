@@ -23,6 +23,15 @@
   const skin = () => SKINS.find(s => s.id === S.get("skin", "neon")) || SKINS[0];
   const color = i => `hsl(${(skin().hue + i * skin().step) % 360} 80% 58%)`;
 
+  let actx;
+  function beep(f, d) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), v = actx.createGain();
+      o.frequency.value = f; o.type = "triangle"; v.gain.value = 0.08;
+      o.connect(v); v.connect(actx.destination); o.start(); v.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + d); o.stop(actx.currentTime + d);
+    } catch (e) {}
+  }
   function coins(n) { S.set("coins", S.get("coins", 0) + n); ui(); }
   function ui() {
     $("coins").textContent = "🪙 " + S.get("coins", 0);
@@ -47,7 +56,7 @@
     const perfect = Math.abs(cur.x - top.x) < 5;
     if (perfect) { combo++; cur.x = top.x; cur.w = top.w; if (combo >= 3) cur.w = Math.min(cur.w + 8, 220); burst(cur.x + cur.w / 2, true); }
     else { combo = 0; burst(cur.x + cur.w / 2, false); cur.x = l; cur.w = ov; }
-    blocks.push(cur); score++;
+    beep(perfect ? 660 + combo * 60 : 330, .12); blocks.push(cur); score++;
     const gain = perfect ? 2 : 1; runCoins += gain; if (S.get("vip", false)) runCoins += gain;
     $("score").textContent = score;
     speed = Math.min(2.4 + score * 0.06, 7); dir = -dir; spawn();
@@ -57,7 +66,7 @@
     for (let i = 0; i < (big ? 18 : 6); i++) particles.push({ x, y, vx: (Math.random() - .5) * 5, vy: -Math.random() * 4, life: 30, c: big ? "#fff" : "#ffd54a" });
   }
   function over() {
-    state = "over";
+    state = "over"; beep(120, .4);
     best = Math.max(S.get("best", 0), score); S.set("best", best);
     $("finalScore").textContent = score; $("finalCoins").textContent = runCoins;
     $("revive").style.display = revived || score < 3 ? "none" : "";
@@ -122,6 +131,7 @@
   addEventListener("keydown", e => { if (e.code === "Space") drop(); });
 
   $("play").onclick = start;
+  $("home").onclick = () => { $("over").style.display = "none"; state = "menu"; $("menu").style.display = "flex"; daily(); ui(); };
   $("again").onclick = async () => { $("over").style.display = "none"; await M.maybeInterstitial(); start(); };
   $("revive").onclick = async () => {
     if (await M.showRewarded("revive")) {
@@ -139,6 +149,7 @@
   $("noadsBtn").onclick = () => M.purchase("remove_ads");
   window.addEventListener("sk-purchase", () => { ui(); shop(); });
 
+  window.__sky = { get cur() { return cur; }, get top() { return blocks && blocks[blocks.length - 1]; }, get state() { return state; }, get score() { return score; }, get combo() { return combo; } };
   M.grantFromReturn(); ui(); daily();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   frame();
