@@ -13,7 +13,9 @@ import 'package:sky_stack/ui/game_screen.dart';
 
 /// Renders every world with a tower to PNG files (for visual review). Set RENDER_DIR to choose the folder.
 void main() {
-  testWidgets('render each world to PNG', (t) async {
+  // Visual-review helper (writes PNG files): only runs when RENDER_UI=1, so normal test runs stay hermetic.
+  final enabled = Platform.environment['RENDER_UI'] == '1';
+  testWidgets('render each world to PNG', skip: !enabled, (t) async {
     SharedPreferences.setMockInitialValues({});
     app = AppServices(store: await Store.load());
     final dir = Directory(Platform.environment['RENDER_DIR'] ?? 'build/worlds')..createSync(recursive: true);
@@ -50,7 +52,7 @@ void main() {
     expect(dir.listSync().where((f) => f.path.contains('world_')).length, greaterThanOrEqualTo(worlds.length));
   });
 
-  testWidgets('render menu background + early game', (t) async {
+  testWidgets('render menu background + early game', skip: !enabled, (t) async {
     SharedPreferences.setMockInitialValues({});
     app = AppServices(store: await Store.load());
     final dir = Directory(Platform.environment['RENDER_DIR'] ?? 'build/worlds')..createSync(recursive: true);
