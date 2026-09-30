@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Sky Stack</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b1020">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;height:100%;background:#0b1020;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;display:flex;justify-content:center}
+#wrap{position:relative;width:100%;max-width:480px;height:100%}
+canvas{display:block}
+#hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;font-weight:700;pointer-events:none}
+#score{position:absolute;top:50px;width:100%;text-align:center;font-size:64px;font-weight:800;display:none;pointer-events:none;text-shadow:0 2px 8px #0008}
+.panel{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#000a;text-align:center;padding:20px}
+#menu{display:flex}
+h1{font-size:48px;margin:0 0 10px;letter-spacing:1px}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:14px 22px;color:#fff;background:#3b82f6;min-width:220px;cursor:pointer}
+button.green{background:#16a34a}button.gold{background:#f59e0b;color:#111}button.grey{background:#475569}
+button:disabled{opacity:.5}
+#skins{display:grid;grid-template-columns:1fr 1fr;gap:8px}#skins .skin{min-width:0}
+#adOverlay{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99}
+</style></head><body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud"><span id="coins"></span><span id="best"></span></div>
+  <div id="score">0</div>
+
+  <div id="menu" class="panel">
+    <h1>SKY STACK</h1>
+    <button id="play" class="green">▶ PLAY</button>
+    <button id="daily" class="gold">🎁 Daily bonus +100 (watch ad)</button>
+    <button id="freeCoins" class="grey">📺 Free coins +50</button>
+    <button id="shopBtn">🛒 Shop</button>
+    <button id="noadsBtn" class="gold">🚫 Remove Ads — $2.99</button>
+  </div>
+
+  <div id="over" class="panel">
+    <h1 style="font-size:36px">Game Over</h1>
+    <div style="font-size:22px">Score <b id="finalScore">0</b> · +🪙<b id="finalCoins">0</b></div>
+    <button id="revive" class="gold">📺 Continue (watch ad)</button>
+    <button id="double" class="green">📺 Double coins</button>
+    <button id="again">↻ Play again</button>
+    <button class="grey" onclick="document.getElementById('shopBtn').click()">🛒 Shop</button>
+  </div>
+
+  <div id="shop" class="panel" style="z-index:5">
+    <h2>Shop</h2>
+    <div id="skins"></div>
+    <button data-sku="coins_500" class="gold">🪙 500 coins — $0.99</button>
+    <button data-sku="coins_2500" class="gold">🪙 2500 coins — $3.99</button>
+    <button data-sku="vip_pass" class="green">👑 VIP: no ads, 2x coins, Gold skin — $4.99</button>
+    <button id="closeShop" class="grey">Close</button>
+  </div>
+</div>
+<div id="adOverlay"><div id="adText" style="font-size:20px"></div><button id="adClose" disabled>Please wait…</button></div>
+<script src="config.js"></script>
+<script src="monetization.js"></script>
+<script src="game.js"></script>
+</body></html>
