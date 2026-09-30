@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'config.dart';
 import 'services/app_services.dart';
+import 'services/perf.dart';
 import 'store.dart';
 import 'ui/menu_screen.dart';
 
@@ -11,6 +12,8 @@ Future<void> main() async {
   final store = await Store.load();
   app = AppServices(store: store);
   if (AppConfig.noAudio) app.audio.available = false;
+  Perf.instance.attach();
+  if (AppConfig.startLite) Perf.instance.forceLite(true);
   runApp(const SkyStackApp());
   // Ads/billing initialise in the background so the game opens instantly.
   app.init();

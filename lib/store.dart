@@ -60,6 +60,9 @@ class Store extends ChangeNotifier {
   bool get sound => _p.getBool('sound') ?? true;
   bool get vibe => _p.getBool('vibe') ?? true;
   bool get music => _p.getBool('music') ?? true;
+  /// "Smooth mode": fewer animated effects (helps slower phones).
+  bool get reduceEffects => _p.getBool('lite') ?? false;
+  void setReduceEffects(bool v) => _set('lite', v);
   bool get noAds => _p.getBool('noAds') ?? false;
   bool get vip => _p.getBool('vip') ?? false;
   String get skinId => _p.getString('skin') ?? 'neon';

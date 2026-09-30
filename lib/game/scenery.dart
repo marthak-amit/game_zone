@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import '../config.dart';
 import '../services/app_services.dart';
 import '../services/music.dart';
+import '../services/perf.dart';
 import 'block_painter.dart';
 import 'engine.dart';
 import 'worlds.dart';
@@ -146,7 +147,7 @@ class Scenery {
   Color _dark(Color c, double t) => Color.lerp(c, Colors.black, t)!;
 
   /// [groundTop] is the y of the ground surface (moves down as the camera climbs).
-  void paint(Canvas c, Size s, WorldState w, double camY, {double groundTop = -1}) {
+  void paint(Canvas c, Size s, WorldState w, double camY, {double groundTop = -1, bool lite = false}) {
     final rect = Offset.zero & s;
     // sky
     c.drawRect(
@@ -154,12 +155,13 @@ class Scenery {
         Paint()
           ..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [w.top, w.bottom]).createShader(rect));
 
-    if (w.aurora > .02) _aurora(c, s, w);
-    if (w.stars > .02) _stars(c, s, w, camY);
+    // lite mode (slow devices / Smooth mode): skip the costly decorative layers
+    if (w.aurora > .02 && !lite) _aurora(c, s, w);
+    if (w.stars > .02 && !lite) _stars(c, s, w, camY);
     if (w.planet > .02) _planet(c, s, w, camY);
     if (w.sun > .02) _sun(c, s, w, camY);
     if (w.moon > .02) _moon(c, s, w, camY);
-    for (final sh in shooting) {
+    for (final sh in lite ? const <_Shoot>[] : shooting) {
       final a = (sh.life.clamp(0, 1)) * w.stars;
       final p1 = Offset(sh.x * s.width, sh.y * s.height);
       final p0 = p1 - Offset(70, 35);
@@ -168,8 +170,8 @@ class Scenery {
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round);
     }
-    if (w.clouds > .02) _clouds(c, s, w, camY);
-    if (w.sun > .3) _birds(c, s, w, camY);
+    if (w.clouds > .02) _clouds(c, s, w, camY, lite ? 3 : clouds.length);
+    if (w.sun > .3 && !lite) _birds(c, s, w, camY);
 
     final gt = groundTop < 0 ? s.height - GameEngine.baseInset + camY : groundTop;
     _skyline(c, s, w, far, gt, camY * .55, .35, 0.55);
@@ -179,7 +181,7 @@ class Scenery {
     c.drawRect(Rect.fromLTRB(0, gt, s.width, s.height + 2), Paint()..color = groundCol);
     c.drawRect(Rect.fromLTWH(0, gt, s.width, 3), Paint()..color = Color.lerp(groundCol, Colors.white, .22)!);
 
-    if (w.rain > .05) _fogAndRain(c, s, w, gt);
+    if (w.rain > .05) _fogAndRain(c, s, w, gt, lite ? .3 : 1);
     if (flash > 0) {
       if (flash > .55) _bolt(c, s, gt);
       c.drawRect(rect, Paint()..color = Colors.white.withValues(alpha: flash * .38 * w.rain));
@@ -263,9 +265,9 @@ class Scenery {
     c.drawOval(Rect.fromCenter(center: o + Offset(14 * sc, -14 * sc), width: 56 * sc, height: 38 * sc), p);
   }
 
-  void _clouds(Canvas c, Size s, WorldState w, double camY) {
+  void _clouds(Canvas c, Size s, WorldState w, double camY, int count) {
     final col = Color.lerp(Colors.white, const Color(0xFF2F3644), w.cloudDark)!;
-    for (final cl in clouds) {
+    for (final cl in clouds.take(count)) {
       _cloud(c, Offset(cl.x * s.width, cl.y * s.height + camY * .08), cl.scale, col, (.8 * w.clouds).clamp(0, 1));
     }
   }
@@ -304,14 +306,14 @@ class Scenery {
     }
   }
 
-  void _fogAndRain(Canvas c, Size s, WorldState w, double gt) {
+  void _fogAndRain(Canvas c, Size s, WorldState w, double gt, double density) {
     final fog = Rect.fromLTWH(0, gt - 140, s.width, 160);
     c.drawRect(fog, Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white.withValues(alpha: .16 * w.rain)]).createShader(fog));
     final p = Paint()
       ..strokeWidth = 1.3
       ..strokeCap = StrokeCap.round
       ..color = const Color(0xFFCFE3FF).withValues(alpha: .5 * w.rain);
-    final n = (drops.length * w.rain).toInt();
+    final n = (drops.length * w.rain * density).toInt();
     for (var i = 0; i < n; i++) {
       final d = drops[i];
       final o = Offset(d.x * s.width, d.y * s.height);
@@ -362,7 +364,8 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
     _t = createTicker((d) {
       final elapsed = ((d - _last).inMicroseconds / 1e6).clamp(0.0, .1);
       // Menus drift slowly, so 30 fps is plenty and halves the drawing cost (matters on low-end phones).
-      if (elapsed < 1 / 31 && _last != Duration.zero) return;
+      final gap = Perf.instance.lite ? 1 / 12 : 1 / 31; // slow devices get a calmer background
+      if (elapsed < gap && _last != Duration.zero) return;
       final dt = elapsed;
       _last = d;
       if (widget.fixed == null) {
@@ -402,7 +405,7 @@ class _ScenePainter extends CustomPainter {
   void paint(Canvas c, Size size) {
     final w = WorldState.at(s.widget.fixed ?? s.pos);
     final gt = size.height - (s.widget.decorTower ? 58 : 90);
-    s.scenery.paint(c, size, w, 0, groundTop: gt);
+    s.scenery.paint(c, size, w, 0, groundTop: gt, lite: Perf.instance.lite);
     if (s.widget.decorTower) {
       const cols = 5;
       for (var i = 0; i < cols; i++) {

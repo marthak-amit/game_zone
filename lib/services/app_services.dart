@@ -4,6 +4,7 @@ import '../store.dart';
 import 'ads.dart';
 import 'audio.dart';
 import 'iap.dart';
+import 'perf.dart';
 
 /// Ties together storage, ads, purchases and audio. One instance for the whole app.
 class AppServices {
@@ -28,6 +29,7 @@ class AppServices {
     audio.vibeOn = store.vibe;
     audio.music.setEnabled(store.music);
     if (!store.sound) audio.setRain(false);
+    Perf.instance.setManual(store.reduceEffects);
   }
 
   Future<void> init() async {

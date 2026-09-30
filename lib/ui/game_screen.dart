@@ -9,6 +9,7 @@ import '../game/engine.dart';
 import '../game/scenery.dart';
 import '../game/worlds.dart';
 import '../services/app_services.dart';
+import '../services/perf.dart';
 import 'confetti.dart';
 import 'widgets.dart';
 
@@ -429,7 +430,7 @@ class GamePainter extends CustomPainter {
     if (e.shake > 0) {
       canvas.translate(sin(e.shake * 9) * e.shake * .8, cos(e.shake * 7) * e.shake * .5);
     }
-    scenery.paint(canvas, size, ws(), e.camY);
+    scenery.paint(canvas, size, ws(), e.camY, lite: Perf.instance.lite);
 
     // Only draw blocks that are on screen - a tall tower must not slow the game down.
     for (final b in e.blocks) {

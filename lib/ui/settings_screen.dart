@@ -15,6 +15,7 @@ class SettingsScreen extends StatelessWidget {
               CardBox(child: Column(children: [
               SwitchListTile(key: const Key('musicSwitch'), title: const Text('🎵 Music'), value: s.music, onChanged: s.setMusic),
               SwitchListTile(key: const Key('soundSwitch'), title: const Text('🔊 Sound effects'), value: s.sound, onChanged: s.setSound),
+              SwitchListTile(key: const Key('liteSwitch'), title: const Text('⚡ Smooth mode'), subtitle: const Text('Fewer animations - best for slower phones', style: TextStyle(fontSize: 12)), value: s.reduceEffects, onChanged: s.setReduceEffects),
               SwitchListTile(key: const Key('vibeSwitch'), title: const Text('📳 Vibration'), value: s.vibe, onChanged: s.setVibe),
               ])),
               const SizedBox(height: 12),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/engine.dart';
 import '../game/scenery.dart';
 import '../services/app_services.dart';
+import '../services/perf.dart';
 import 'anim_widgets.dart';
 export 'anim_widgets.dart';
 import 'level_screen.dart';
@@ -120,6 +121,7 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
   late final AnimationController _c = loopController(this, const Duration(milliseconds: 1300), reverse: true);
   @override
   void dispose() {
+    Perf.instance.unregister(_c);
     _c.dispose();
     super.dispose();
   }
@@ -294,6 +296,7 @@ class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateM
   late final AnimationController _shine = loopController(this, const Duration(milliseconds: 2800));
   @override
   void dispose() {
+    Perf.instance.unregister(_shine);
     _shine.dispose();
     super.dispose();
   }

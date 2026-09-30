@@ -3,6 +3,8 @@
 class AppConfig {
   /// Diagnostic build variant (CI only): 'full' (normal), 'noaudio' (all sound off), 'noanim' (looping animations off).
   static const String variant = String.fromEnvironment('VARIANT', defaultValue: 'full');
+  /// Diagnostic CI build that starts in lite mode.
+  static bool get startLite => variant == 'lite';
   static bool get noAudio => variant == 'noaudio';
   static bool get noAnim => variant == 'noanim';
   /// Background scenery frozen (variants: noscenery, noanim).

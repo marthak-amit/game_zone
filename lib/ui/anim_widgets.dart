@@ -2,11 +2,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../config.dart';
 import '../services/app_services.dart';
+import '../services/perf.dart';
 
 /// Creates a looping animation controller (it stays still in the diagnostic 'noanim' CI variant).
 AnimationController loopController(TickerProvider vsync, Duration duration, {bool reverse = false, bool freeze = false}) {
   final c = AnimationController(vsync: vsync, duration: duration);
-  if (!AppConfig.noLoops && !freeze) c.repeat(reverse: reverse);
+  if (!AppConfig.noLoops && !freeze) {
+    c.repeat(reverse: reverse);
+    Perf.instance.register(c, reverse); // paused automatically on slow devices / in Smooth mode
+  }
   return c;
 }
 
@@ -95,6 +99,7 @@ class _BobState extends State<Bob> with SingleTickerProviderStateMixin {
   late final AnimationController _c = loopController(this, widget.period, reverse: true);
   @override
   void dispose() {
+    Perf.instance.unregister(_c);
     _c.dispose();
     super.dispose();
   }
@@ -119,6 +124,7 @@ class _WiggleState extends State<Wiggle> with SingleTickerProviderStateMixin {
   late final AnimationController _c = loopController(this, const Duration(milliseconds: 1400));
   @override
   void dispose() {
+    Perf.instance.unregister(_c);
     _c.dispose();
     super.dispose();
   }
@@ -158,6 +164,7 @@ class _PopInState extends State<PopIn> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    Perf.instance.unregister(_c);
     _c.dispose();
     super.dispose();
   }
@@ -188,6 +195,7 @@ class _SpinningCoinState extends State<SpinningCoin> with SingleTickerProviderSt
   late final AnimationController _c = loopController(this, const Duration(milliseconds: 1700), freeze: AppConfig.noCoin);
   @override
   void dispose() {
+    Perf.instance.unregister(_c);
     _c.dispose();
     super.dispose();
   }
