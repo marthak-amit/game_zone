@@ -359,7 +359,10 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
     super.initState();
     pos = widget.fixed ?? _sharedPos;
     _t = createTicker((d) {
-      final dt = ((d - _last).inMicroseconds / 1e6).clamp(0.0, .1);
+      final elapsed = ((d - _last).inMicroseconds / 1e6).clamp(0.0, .1);
+      // Menus drift slowly, so 30 fps is plenty and halves the drawing cost (matters on low-end phones).
+      if (elapsed < 1 / 31 && _last != Duration.zero) return;
+      final dt = elapsed;
       _last = d;
       if (widget.fixed == null) {
         pos += dt * .05;

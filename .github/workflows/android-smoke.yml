@@ -19,6 +19,12 @@ jobs:
         with: { channel: stable, cache: true }
       - run: flutter pub get
       - run: flutter build apk --release
+      - name: Free memory before starting the emulator
+        run: |
+          (cd android && ./gradlew --stop) || true
+          pkill -f KotlinCompileDaemon || true
+          pkill -f GradleDaemon || true
+          free -m
       - name: Launch on emulator and capture logs
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -29,4 +35,9 @@ jobs:
           script: bash scripts/android_smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: smoke-screenshots, path: 'smoke_*.png' }
+        with:
+          name: smoke-screenshots
+          path: |
+            smoke_*.png
+            smoke_logcat.txt
+            smoke_host.txt

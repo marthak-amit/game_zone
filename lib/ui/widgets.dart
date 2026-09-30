@@ -300,7 +300,9 @@ class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) => Pulse(
-        child: Container(
+        // RepaintBoundary: the blurred glow is rasterised once; pulsing only scales the cached layer.
+        child: RepaintBoundary(
+          child: Container(
           width: 270,
           height: 74,
           decoration: BoxDecoration(
@@ -314,7 +316,8 @@ class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateM
             child: Stack(children: [
               Positioned.fill(
                 child: IgnorePointer(
-                  child: AnimatedBuilder(
+                  child: RepaintBoundary(
+                   child: AnimatedBuilder(
                     animation: _shine,
                     builder: (_, _) {
                       final t = (_shine.value / .45).clamp(0.0, 1.0); // sweep during the first 45% of each cycle
@@ -328,6 +331,7 @@ class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateM
                         ),
                       );
                     },
+                  ),
                   ),
                 ),
               ),
@@ -353,6 +357,7 @@ class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateM
               ),
             ]),
           ),
+        ),
         ),
       );
 }

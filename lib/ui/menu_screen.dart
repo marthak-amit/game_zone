@@ -46,10 +46,12 @@ class MenuScreen extends StatelessWidget {
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             Bob(
                               amplitude: 5,
-                              child: ShaderMask(
+                              child: RepaintBoundary(
+                               child: ShaderMask(
                                 shaderCallback: (r) => const LinearGradient(colors: [Colors.white, Color(0xFFBFE9FF), Color(0xFFFFE0F0)]).createShader(r),
                                 child: const Text('SKY STACK',
                                     style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.white, shadows: [Shadow(blurRadius: 20, color: Colors.black54), Shadow(blurRadius: 3, color: Colors.black45)])),
+                              ),
                               ),
                             ),
                             const SizedBox(height: 4),

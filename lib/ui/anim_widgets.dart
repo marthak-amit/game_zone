@@ -24,7 +24,7 @@ class MenuTile extends StatelessWidget {
               width: 66,
               height: 74,
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                wiggle ? Wiggle(child: Text(icon, style: const TextStyle(fontSize: 28))) : Text(icon, style: const TextStyle(fontSize: 28)),
+                wiggle ? RepaintBoundary(child: Wiggle(child: Text(icon, style: const TextStyle(fontSize: 28)))) : Text(icon, style: const TextStyle(fontSize: 28)),
                 const SizedBox(height: 4),
                 FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
               ]),
@@ -35,13 +35,15 @@ class MenuTile extends StatelessWidget {
           Positioned(
             right: -6,
             top: -8,
-            child: Bob(
+            child: RepaintBoundary(
+              child: Bob(
               amplitude: 2.5,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white, width: 1.5)),
                 child: Text(badge!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
               ),
+            ),
             ),
           ),
       ]);
@@ -180,7 +182,8 @@ class _SpinningCoinState extends State<SpinningCoin> with SingleTickerProviderSt
   Widget build(BuildContext context) => SizedBox(
         width: widget.size,
         height: widget.size,
-        child: AnimatedBuilder(
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
           animation: _c,
           builder: (_, _) {
             final a = _c.value * 2 * pi;
@@ -191,6 +194,7 @@ class _SpinningCoinState extends State<SpinningCoin> with SingleTickerProviderSt
               child: CustomPaint(painter: _CoinPainter(shade: .5 + .5 * face)),
             );
           },
+        ),
         ),
       );
 }
