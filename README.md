@@ -1,45 +1,42 @@
-# Sky Stack — hyper-casual game built for revenue
+# Sky Stack (Flutter)
 
-Tap to drop blocks, build the tallest tower. Runs as a web game (PWA) and as an Android/iOS app (Capacitor).
+One-tap arcade stacker for **Android, iOS and Web**, built with Flutter and designed to earn from
+rewarded ads, interstitials and in-app purchases.
 
-## Monetization built in
-| Stream | Where |
+## Features
+Perfect-drop combos · falling-piece physics · tutorial · pause (auto-pause on app switch) · 6 skins ·
+daily login streak (up to Day 7, doubled by ad) · 3 daily missions · stats · share score · sound/haptics · saved progress.
+
+## Monetization
+| Stream | Implementation |
 |---|---|
-| Rewarded ads (revive, double coins, daily bonus, free coins) | `monetization.js` → AdMob (native) / AdSense H5 (web) |
-| Interstitials (every 3 games, 60s cap, skipped for payers) | same |
-| IAP: Remove Ads $2.99, Coins $0.99/$3.99, VIP $4.99 | Play Billing / StoreKit via `cordova-plugin-purchase` |
-| Retention: daily bonus, skins, best score | `game.js` |
+| Rewarded ads: continue, double coins, double daily, free coins | `lib/services/ads_platform_io.dart` (AdMob + GDPR consent) |
+| Interstitial every 3 games, ≥60s apart, never for payers | `AppServices.maybeInterstitial` |
+| IAP: Remove Ads, 500 / 2500 coins, VIP (no ads + 2× coins + gold skin) | `lib/services/iap_platform_io.dart` (Play Billing / StoreKit) |
 
-## Game features (complete)
-Stacking gameplay with perfect-drop combos, falling-piece animation, tutorial, pause (auto-pause on app switch), 6 skins,
-daily login streak reward (up to Day 7), 3 daily missions, stats, share score, sound/vibration settings, saved progress.
-Ads and purchases currently run in **demo mode** (fake ad screen, instant purchases) — real AdMob/billing is the next phase.
+On **web/desktop** (and tests) the app uses demo ads/purchases. On **Android/iOS** it uses real AdMob & store billing,
+currently with Google's **test** ad units so nothing is charged/paid until you swap IDs.
 
-## Run locally (demo mode: fake ads, instant purchases)
-Open `index.html` or `python3 -m http.server`.
-
-## Build the mobile app
+## Run / test / build
 ```
-npm install
-npm run android:add     # creates android/ (needs Android Studio + JDK17)
-npm run ios:add         # macOS + Xcode only
-npm run android:apk     # debug APK  (or run the GitHub Action "Build Android")
+flutter pub get
+flutter test                 # engine + full UI flow tests
+flutter run                  # device or emulator
+flutter build apk --release  # Android
+flutter build appbundle      # Play Store upload
+flutter build web --no-web-resources-cdn
 ```
-After `cap add android`, add to `android/app/src/main/AndroidManifest.xml` inside `<application>`:
-`<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="YOUR_ADMOB_APP_ID"/>`
+GitHub Actions (`.github/workflows/flutter.yml`) runs analyze + tests and produces an APK and web build on every push.
 
-## Go-live checklist (things only you can do)
-1. Change `appId` in `capacitor.config.json`; set `mode: "live"` in `config.js`.
-2. Create AdMob account → app + Rewarded + Interstitial units → paste ids in `config.js` (currently Google TEST ids).
-3. Google Play Console ($25 one-time) → create IAP products with ids in `config.products` → upload signed AAB (`npm run android:aab`). Apple: $99/yr.
-4. Add a privacy policy URL + consent (UMP/GDPR) before live ads.
-5. Add app icon/splash (`npx @capacitor/assets generate`).
+## Go-live checklist
+1. Pick your final id: change `applicationId`/`namespace` in `android/app/build.gradle.kts` (currently `com.amit.sky_stack`) and the iOS bundle id.
+2. AdMob: create app + rewarded + interstitial units. Put IDs in `lib/config.dart` and the App ID in
+   `android/app/src/main/AndroidManifest.xml` and `ios/Runner/Info.plist` (`GADApplicationIdentifier`).
+3. Play Console: create products `remove_ads`, `coins_500`, `coins_2500`, `vip_pass` (see `lib/config.dart`, `STORE_LISTING.md`).
+4. Host `docs/privacy.html` (GitHub Pages) and add the URL to the store listing.
+5. Create a signing key, add `android/key.properties`, build `flutter build appbundle`.
 
-## Honest revenue math for $10K/month
-Rewarded+interstitial ad revenue ≈ $10–30 per 1,000 daily-active-user sessions-heavy players; IAP adds ~1–3% payers.
-Realistically you need roughly **50–150K daily active users**. The game is the easy part — **user acquisition is the work**:
-- Post short gameplay clips daily on TikTok/Reels/Shorts (free traffic, the main channel for hyper-casual).
-- Test with $200–500 of ads (Unity/AppLovin/Meta): only scale if cost-per-install < ~$0.40 and day-1 retention > 35%.
-- Ship 3–5 more small games reusing this monetization layer; portfolio beats a single title.
-- Publish the web version on CrazyGames/Poki/GameDistribution for extra ad revenue.
-No one can guarantee $10K/month; expect months to reach it.
+## Revenue reality
+$10K/month needs roughly 50–150K daily players. Drive traffic with daily TikTok/Reels/Shorts gameplay clips,
+test paid installs with $200–500 (scale only if CPI < ~$0.40 and day-1 retention > 35%), and reuse this
+monetization layer for more small games. No result is guaranteed.

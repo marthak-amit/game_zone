@@ -10,4 +10,4 @@ How high can you go?
 **Privacy policy URL:** host privacy.html (e.g. GitHub Pages) and paste the link.
 **Data safety:** Device ID collected for advertising (AdMob); no data shared otherwise.
 **Assets needed:** 512×512 icon (export icon.svg), 1024×500 feature graphic, 2+ phone screenshots.
-**IAP products (Play Console → Monetize):** remove_ads (non-consumable $2.99), coins_500 ($0.99), coins_2500 ($3.99), vip_pass (non-consumable $4.99).
+**IAP products (Play Console → Monetize):** remove_ads (non-consumable $2.99), coins_500 (consumable $0.99), coins_2500 (consumable $3.99), vip_pass (non-consumable $4.99).
