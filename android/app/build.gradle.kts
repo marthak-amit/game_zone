@@ -51,6 +51,10 @@ android {
         release {
             // Uses the upload key when key.properties exists; otherwise debug keys so CI/test builds still work.
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // R8 strips the Room/WorkManager classes that the AdMob SDK needs at startup
+            // ("Failed to create an instance of androidx.work.impl.WorkDatabase"), so shrinking stays off.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

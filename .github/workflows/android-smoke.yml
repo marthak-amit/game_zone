@@ -31,10 +31,10 @@ jobs:
             adb install -r build/app/outputs/flutter-apk/app-release.apk
             adb shell monkey -p com.amit.sky_stack -c android.intent.category.LAUNCHER 1
             sleep 25
-            echo "=== PID ==="; adb shell pidof com.amit.sky_stack || echo "APP NOT RUNNING"
-            echo "=== FATAL / ERRORS ==="; adb logcat -d -b crash || true
-            adb logcat -d | grep -E "AndroidRuntime|FATAL|flutter|sky_stack|Exception" | tail -80 || true
             adb exec-out screencap -p > smoke.png || true
+            echo "=== CRASH BUFFER ==="; adb logcat -d -b crash | head -40 || true
+            echo "=== FLUTTER LOG ==="; adb logcat -d -s flutter:V | tail -30 || true
+            if adb shell pidof com.amit.sky_stack; then echo "SMOKE RESULT: APP RUNNING OK"; else echo "SMOKE RESULT: APP NOT RUNNING"; exit 1; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: smoke-screenshot, path: smoke.png }
