@@ -20,7 +20,11 @@ const _cfgs = <_Cfg>[
   _Cfg(146.83, true, 60, .22, 'bell', 44), // Rain Storm   – low, sparse D minor
   _Cfg(329.63, false, 84, .70, 'arp', 55), // Aurora       – shimmering arpeggios
   _Cfg(196.00, true, 56, .30, 'bell', 66), // Deep Space   – slow bells
+  _Cfg(293.66, false, 84, .62, 'arp', 77), // Home screen  – warm, welcoming D major
 ];
+
+/// Track id of the home-screen music (worlds use 0..5).
+const int homeTrack = 6;
 
 const _rate = 16000;
 
@@ -124,6 +128,7 @@ Uint8List buildTrack(int world) {
 /// Plays one looping ambient track that matches the current world, cross-fading when the world changes.
 class Music {
   static const double volume = .4;
+  double _target = volume; // current loudness target (ducked while paused / on game over)
   bool enabled = true;
   bool available = true;
   AudioPlayer? _p;
@@ -142,7 +147,18 @@ class Music {
     return bytes;
   }
 
-  /// Switch to the music of world [w] (no-op if it is already playing).
+  /// Id of the track that is (or should be) playing.
+  int? get current => _wanted;
+
+  /// Lowers the music (pause screen, game over) or restores it.
+  void duck(bool on) {
+    _target = on ? volume * .3 : volume;
+    try {
+      _p?.setVolume(_target);
+    } catch (_) {}
+  }
+
+  /// Switch to track [w]: a world (0..5) or [homeTrack] (no-op if it is already playing).
   Future<void> setWorld(int w) async {
     w = w % _cfgs.length;
     _wanted = w;
@@ -162,7 +178,7 @@ class Music {
       await p.setReleaseMode(ReleaseMode.loop);
       await p.play(BytesSource(bytes), volume: 0);
       if (_paused) await p.pause();
-      await _fade(p, volume, gen);
+      await _fade(p, _target, gen);
       _playing = true;
     } catch (_) {
       // e.g. browser autoplay rules: allow a retry on the next user gesture

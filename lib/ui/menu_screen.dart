@@ -81,7 +81,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             const SizedBox(height: 6),
                             Text('🏆 Best  ${s.best}', key: const Key('best'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, shadows: [Shadow(blurRadius: 8, color: Colors.black54)])),
                             const SizedBox(height: 12),
-                            Pulse(child: BigButton('▶   PLAY', () => _push(const GameScreen()), color: kGreen, width: 260, height: 62)),
+                            PlayButton(onPressed: () => _push(const GameScreen())),
                             if (s.dailyAvailable)
                               BigButton('🎁 Daily reward — Day ${s.nextStreak}: +${s.dailyReward}', () => _claimDaily(context), color: kGold, textColor: Colors.black),
                             const SizedBox(height: 8),
@@ -102,11 +102,19 @@ class _MenuScreenState extends State<MenuScreen> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        child: Text('💡 ${_tips[_tip]}', key: ValueKey(_tip), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, shadows: [Shadow(blurRadius: 6, color: Colors.black87)])),
+                    // Fixed height: tips of different length must never resize (and shift) the layout above.
+                    SizedBox(
+                      height: 54,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          child: Align(
+                            key: ValueKey(_tip),
+                            alignment: Alignment.topCenter,
+                            child: Text('💡 ${_tips[_tip]}', key: const Key('tip'), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, shadows: [Shadow(blurRadius: 6, color: Colors.black87)])),
+                          ),
+                        ),
                       ),
                     ),
                   ]);

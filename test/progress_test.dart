@@ -61,12 +61,11 @@ void main() {
     expect(s.coins, Store.spinPrizes[3] + 2 * Store.spinPrizes[0]);
   });
 
-  test('music / voice settings persist', () async {
+  test('music setting persists', () async {
     final s = await fresh();
-    expect(s.music && s.voice, isTrue);
+    expect(s.music, isTrue);
     s.setMusic(false);
-    s.setVoice(false);
-    expect(s.music || s.voice, isFalse);
+    expect(s.music, isFalse);
   });
 
   test('daily missions are 3 distinct ones and include the world mission pool', () async {

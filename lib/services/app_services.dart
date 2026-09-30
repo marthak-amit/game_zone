@@ -10,13 +10,14 @@ class AppServices {
   final Store store;
   final AdService ads;
   final IapService iap;
-  final Audio audio = Audio();
+  final Audio audio;
 
   int _gamesSinceInterstitial = 0;
   DateTime _lastInterstitial = DateTime.fromMillisecondsSinceEpoch(0);
 
-  AppServices({required this.store, AdService? ads, IapService? iap})
-      : ads = ads ?? createAdService(),
+  AppServices({required this.store, AdService? ads, IapService? iap, Audio? audio})
+      : audio = audio ?? Audio(),
+        ads = ads ?? createAdService(),
         iap = iap ?? createIapService() {
     store.addListener(_syncAudio);
     _syncAudio();
@@ -25,7 +26,6 @@ class AppServices {
   void _syncAudio() {
     audio.soundOn = store.sound;
     audio.vibeOn = store.vibe;
-    audio.voice.enabled = store.voice;
     audio.music.setEnabled(store.music);
     if (!store.sound) audio.setRain(false);
   }

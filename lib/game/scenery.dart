@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../services/app_services.dart';
+import '../services/music.dart';
 import 'block_painter.dart';
 import 'engine.dart';
 import 'worlds.dart';
@@ -351,7 +352,6 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
   late final Ticker _t;
   Duration _last = Duration.zero;
   double pos = 0;
-  int _musicWorld = -1;
   final _tick = ValueNotifier<int>(0);
 
   @override
@@ -365,11 +365,8 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
         pos += dt * .05;
         _sharedPos = pos;
       }
-      final idx = (widget.fixed ?? pos).round() % worlds.length;
-      if (idx != _musicWorld) {
-        _musicWorld = idx;
-        app.audio.music.setWorld(idx);
-      }
+      // Menus all share the home-screen music (no-op if it is already the current track).
+      if (app.audio.music.current != homeTrack) app.audio.music.setWorld(homeTrack);
       scenery.update(dt, WorldState.at(widget.fixed ?? pos));
       _tick.value++;
     })..start();

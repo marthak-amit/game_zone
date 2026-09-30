@@ -7,7 +7,7 @@ rewarded ads, interstitials and in-app purchases.
 **Worlds:** six animated backgrounds that blend as your tower grows — Morning Sky, Golden Hour, Starry Night (moon, shooting stars),
 Rain Storm (rain, lightning, rain sound), Aurora, Deep Space (planet). Parallax city skyline with lit windows.
 **Pace:** speed rises smoothly with both score and time.
-**Audio:** a unique ambient music loop per world (generated in code, cross-fades as you climb), rain ambience, chimes, and a voice announcer ("Perfect!", "Fever time!", "New high score!", "Welcome to Rain Storm"). Music / voice / effects have separate switches.
+**Audio:** all generated in code (no audio files): separate ambient music for the home screen and for each of the six worlds (cross-fades as you climb), a start-of-round sting, a landing thud on every block (brighter + chime on PERFECT), a game-over sound, rain ambience in the storm, and crowd applause + fanfare for a new high score. No spoken voice. Music and effects have separate switches.
 **Celebrations:** confetti, stars and hearts rain from the top the moment you beat your best, plus a fanfare and a bigger shower on the game-over card.
 **Progression:** XP + levels with coin rewards, 12 achievements, daily lucky wheel (free spin + ad spins), daily streak, daily missions.
 **Feel:** glossy blocks, pentatonic chime melody on perfect streaks, FEVER (x2 coins at 5x combo), milestone banners, screen shake.

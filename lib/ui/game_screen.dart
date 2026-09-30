@@ -51,7 +51,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     app.audio.setRain(false);
-    app.audio.voice.stop();
+    app.audio.music.duck(false);
     _ticker.dispose();
     super.dispose();
   }
@@ -96,6 +96,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _spokenBanner = null;
     _readyAt = _now + const Duration(milliseconds: 750);
     phase = Phase.play;
+    app.audio.music.duck(false);
+    app.audio.startRound();
   }
 
   void _tap() {
@@ -103,14 +105,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final r = engine.drop();
     switch (r) {
       case DropResult.perfect:
+        app.audio.thud(perfect: true);
         app.audio.chime(engine.combo - 1);
         app.audio.buzz();
-        _comboVoice(engine.combo);
+        if (engine.combo == GameEngine.feverCombo) app.audio.sparkle();
       case DropResult.good:
-        app.audio.beep(330, .1);
+        app.audio.thud();
         app.audio.buzz(8);
       case DropResult.miss:
-        app.audio.miss();
+        app.audio.music.duck(true);
+        app.audio.gameOver();
         app.audio.buzz(40);
         _gameOver();
       case DropResult.none:
@@ -122,20 +126,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
-  void _comboVoice(int combo) {
-    const lines = {3: 'Nice!', 5: 'Fever time!', 8: 'Unstoppable!', 12: 'Incredible!', 16: 'Legendary!'};
-    final l = lines[combo];
-    if (l != null) app.audio.voice.say(l);
-  }
-
-  /// Announce world changes and score milestones once each.
+  /// Sound cue for world changes and score milestones (once each).
   void _bannerVoice() {
     final b = engine.banner;
     if (b == null || engine.bannerLife <= 0 || b == _spokenBanner) return;
     _spokenBanner = b;
     if (b == 'NEW BEST!') return;
-    final isWorld = worlds.any((w) => w.name == b);
-    app.audio.voice.say(isWorld ? 'Welcome to $b' : b, force: true);
+    if (worlds.any((w) => w.name == b)) {
+      app.audio.whoosh();
+      app.audio.sparkle();
+    } else {
+      app.audio.sparkle();
+    }
   }
 
   /// Confetti + cheer the moment the player passes their old best score mid-game.
@@ -147,7 +149,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _spokenBanner = 'NEW BEST!';
     confetti.fire(seconds: 1.4, density: .9);
     app.audio.fanfare();
-    app.audio.voice.say('New high score!', force: true);
+    app.audio.applause(long: false);
   }
 
   void _gameOver() {
@@ -169,21 +171,22 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (newBest) {
         confetti.fire(seconds: 1.8, density: 1.3);
         app.audio.fanfare();
-        app.audio.voice.say(liveCelebrated ? 'Congratulations!' : 'New high score! Congratulations!', force: true);
+        app.audio.applause(); // crowd applause for a new high score
       } else if (levelsGained > 0) {
         app.audio.fanfare();
-        app.audio.voice.say('Level up!', force: true);
+        app.audio.sparkle();
       } else if (unlocked.isNotEmpty) {
-        app.audio.voice.say('Achievement unlocked!', force: true);
-      } else {
-        app.audio.voice.say(engine.score >= 10 ? 'Nice run!' : 'Game over');
+        app.audio.ding();
       }
       setState(() => phase = Phase.over);
     });
   }
 
   void _pause() {
-    if (phase == Phase.play && mounted) setState(() => phase = Phase.pause);
+    if (phase == Phase.play && mounted) {
+      app.audio.music.duck(true);
+      setState(() => phase = Phase.pause);
+    }
   }
 
   Future<void> _revive() async {
@@ -191,6 +194,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       revived = true;
       app.store.addCoins(-engine.runCoins);
       engine.revive();
+      app.audio.music.duck(false);
       _readyAt = _now + const Duration(milliseconds: 900);
       setState(() => phase = Phase.play);
     }
@@ -219,7 +223,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       body: CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.space): _tap,
-          const SingleActivator(LogicalKeyboardKey.escape): () => phase == Phase.pause ? setState(() => phase = Phase.play) : _pause(),
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            if (phase == Phase.pause) {
+              app.audio.music.duck(false);
+              setState(() => phase = Phase.play);
+            } else {
+              _pause();
+            }
+          },
         },
         child: Focus(
           autofocus: true,
@@ -289,7 +300,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     if (phase == Phase.pause) _panel([
                       const Text('Paused', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
                       const SizedBox(height: 8),
-                      BigButton('▶ Resume', () => setState(() => phase = Phase.play), color: kGreen),
+                      BigButton('Resume', () {
+                        app.audio.music.duck(false);
+                        setState(() => phase = Phase.play);
+                      }, color: kGreen),
                       BigButton('🏠 Quit to menu', () => Navigator.pop(context), color: kGrey),
                     ]),
                     if (phase == Phase.over) _overPanel(),

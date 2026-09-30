@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sky_stack/achievements.dart';
 import 'package:sky_stack/main.dart';
 import 'package:sky_stack/services/ads.dart';
+import 'package:sky_stack/services/audio.dart';
+import 'package:sky_stack/services/music.dart';
+import 'package:sky_stack/ui/level_screen.dart';
 import 'package:sky_stack/services/app_services.dart';
 import 'package:sky_stack/services/iap.dart';
 import 'package:sky_stack/store.dart';
@@ -37,6 +40,32 @@ class FakeIap implements IapService {
   Future<void> buy(BuildContext c, String sku) async => g(sku);
 }
 
+/// Records which sounds the game asks for (no real playback).
+class RecordingAudio extends Audio {
+  final log = <String>[];
+  @override
+  void thud({bool perfect = false}) => log.add(perfect ? 'thudP' : 'thud');
+  @override
+  void chime(int step) => log.add('chime');
+  @override
+  void gameOver() => log.add('gameOver');
+  @override
+  void startRound() => log.add('start');
+  @override
+  void applause({bool long = true}) => log.add(long ? 'applause' : 'applauseS');
+  @override
+  void fanfare() => log.add('fanfare');
+  @override
+  void sparkle() => log.add('sparkle');
+  @override
+  void whoosh() => log.add('whoosh');
+  @override
+  void ding() => log.add('ding');
+  @override
+  void click() => log.add('click');
+}
+
+late RecordingAudio rec;
 late FakeAds ads;
 
 Future<void> boot(WidgetTester t, {Map<String, Object> prefs = const {}}) async {
@@ -46,7 +75,8 @@ Future<void> boot(WidgetTester t, {Map<String, Object> prefs = const {}}) async 
   addTearDown(t.view.reset);
   ads = FakeAds();
   final iap = FakeIap();
-  app = AppServices(store: await Store.load(), ads: ads, iap: iap);
+  rec = RecordingAudio();
+  app = AppServices(store: await Store.load(), ads: ads, iap: iap, audio: rec);
   app.audio.available = false; // no real sound plugins in tests
   await app.init();
   await t.pumpWidget(const SkyStackApp());
@@ -109,7 +139,7 @@ void main() {
     await t.tap(find.byKey(const Key('pauseBtn')));
     await t.pump();
     expect(find.text('Paused'), findsOneWidget);
-    await t.tap(find.text('▶ Resume'));
+    await t.tap(find.text('Resume'));
     await t.pump();
     expect(find.text('Paused'), findsNothing);
     await t.tap(find.byKey(const Key('pauseBtn')));
@@ -203,18 +233,15 @@ void main() {
     expect(app.store.sound, isFalse);
     expect(app.audio.soundOn, isFalse);
     await t.tap(find.byKey(const Key('musicSwitch')));
-    await t.tap(find.byKey(const Key('voiceSwitch')));
     await t.pump();
     expect(app.store.music, isFalse);
-    expect(app.store.voice, isFalse);
-    expect(app.audio.voice.enabled, isFalse);
     expect(app.audio.music.enabled, isFalse);
   });
 
   testWidgets('menu shows level chip, best score and all feature tiles', (t) async {
     await boot(t);
     expect(find.byKey(const Key('levelChip')), findsOneWidget);
-    expect(find.textContaining('Lv 1'), findsOneWidget);
+    expect(find.text('Rookie'), findsOneWidget);
     for (final label in ['Lucky Wheel', 'Missions', 'Achievements', 'Shop', 'Free coins', 'Settings']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
@@ -343,8 +370,98 @@ void main() {
     await t.pump();
     expect(find.text('Paused'), findsOneWidget);
     expect(find.byKey(const Key('playfield')), findsOneWidget); // still on the game screen
-    await t.tap(find.text('▶ Resume'));
+    await t.tap(find.text('Resume'));
     await t.pump();
     expect(find.text('Paused'), findsNothing);
+  });
+
+  testWidgets('level badge is tappable and explains levels, XP and rewards', (t) async {
+    await boot(t, prefs: {'xp': 100 + 140 + 180 + 220 + 30}); // level 5 (Stacker), 30 xp in
+    expect(find.text('Stacker'), findsOneWidget);
+    await t.tap(find.byKey(const Key('levelChip')));
+    await settle(t);
+    expect(find.byType(LevelScreen), findsOneWidget);
+    expect(find.byKey(const Key('levelTitle')), findsOneWidget);
+    expect(find.text('Stacker'), findsWidgets);
+    expect(find.text('How do I earn XP?'), findsOneWidget);
+    expect(find.text('What do I get for leveling up?'), findsOneWidget);
+    expect(find.textContaining('XP to reach Level 6'), findsOneWidget);
+    await t.dragUntilVisible(find.text('Titles'), find.byType(ListView), const Offset(0, -150));
+    expect(find.text('Titles'), findsOneWidget);
+    await t.dragUntilVisible(find.text('Architect'), find.byType(ListView), const Offset(0, -150));
+    expect(find.text('Architect'), findsOneWidget);
+    expect(find.text('YOU'), findsOneWidget); // marks the player's current title
+    await t.dragUntilVisible(find.byKey(const Key('back')), find.byType(ListView), const Offset(0, 300));
+    await t.tap(find.byKey(const Key('back')));
+    await settle(t);
+    expect(find.byType(LevelScreen), findsNothing);
+  });
+
+  testWidgets('menu layout does not move when the tip text changes', (t) async {
+    await boot(t);
+    final playPos = t.getCenter(find.byKey(const Key('playButton')));
+    final tilePos = t.getCenter(find.text('Shop'));
+    final seen = <String>{};
+    for (var i = 0; i < 8; i++) {
+      await t.pump(const Duration(seconds: 6, milliseconds: 100)); // tip rotates every 6 s
+      await t.pump(const Duration(milliseconds: 600));
+      seen.add((t.widget(find.byKey(const Key('tip'))) as Text).data!);
+      expect((t.getCenter(find.byKey(const Key('playButton'))) - playPos).distance, lessThan(.5), reason: 'PLAY moved when tip changed');
+      expect((t.getCenter(find.text('Shop')) - tilePos).distance, lessThan(.5), reason: 'tiles moved when tip changed');
+    }
+    expect(seen.length, greaterThan(3), reason: 'tips should actually change');
+  });
+
+  testWidgets('menus play the home music; the game plays a world track; back to menu returns to home', (t) async {
+    await boot(t);
+    await t.pump(const Duration(milliseconds: 200));
+    expect(app.audio.music.current, homeTrack);
+    await startPlaying(t);
+    await t.pump(const Duration(milliseconds: 300));
+    expect(app.audio.music.current, isNot(homeTrack));
+    expect(app.audio.music.current, lessThan(6));
+    await t.pump(const Duration(milliseconds: 900));
+    await t.binding.handlePopRoute(); // pause
+    await t.pump();
+    await t.tap(find.text('🏠 Quit to menu'));
+    await settle(t);
+    await t.pump(const Duration(milliseconds: 200));
+    expect(app.audio.music.current, homeTrack);
+  });
+
+  testWidgets('sound design: start sting, landing thuds, game-over sound, then applause for a new high score', (t) async {
+    await boot(t, prefs: {'games': 5});
+    await startPlaying(t);
+    expect(rec.log, contains('start'));
+    await t.pump(const Duration(milliseconds: 1000));
+    final e = (t.state(find.byType(GameScreen)) as dynamic).engine;
+    e.cur.x = e.top.x; // perfect
+    await t.tap(find.byKey(const Key('playfield')));
+    await t.pump(const Duration(milliseconds: 50));
+    expect(rec.log, containsAll(['thudP', 'chime']));
+    e.cur.x = e.top.x + 40; // good, not perfect
+    await t.tap(find.byKey(const Key('playfield')));
+    await t.pump(const Duration(milliseconds: 50));
+    expect(rec.log, contains('thud'));
+    expect(rec.log, isNot(contains('gameOver')));
+    e.cur.x = e.top.x + 999; // miss
+    await t.tap(find.byKey(const Key('playfield')));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(rec.log, contains('gameOver'));
+    expect(rec.log, isNot(contains('applause')), reason: 'applause waits for the result card');
+    await t.pump(const Duration(milliseconds: 900));
+    expect(rec.log, containsAll(['fanfare', 'applause'])); // first score ever => new best
+  });
+
+  testWidgets('no new-best applause when the score does not beat the best', (t) async {
+    await boot(t, prefs: {'games': 5, 'best': 50});
+    await startPlaying(t);
+    await t.pump(const Duration(milliseconds: 1000));
+    final e = (t.state(find.byType(GameScreen)) as dynamic).engine;
+    e.cur.x = e.top.x + 999;
+    await t.tap(find.byKey(const Key('playfield')));
+    await t.pump(const Duration(seconds: 1));
+    expect(rec.log, contains('gameOver'));
+    expect(rec.log, isNot(contains('applause')));
   });
 }

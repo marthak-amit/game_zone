@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/engine.dart';
 import '../game/scenery.dart';
 import '../services/app_services.dart';
+import 'level_screen.dart';
 
 /// Animated world background (slowly cycles through all worlds) used on menus.
 class SkyBackground extends StatelessWidget {
@@ -81,7 +82,10 @@ class _BigButtonState extends State<BigButton> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: widget.onPressed,
+                onTap: () {
+                  app.audio.click();
+                  widget.onPressed!();
+                },
                 onHighlightChanged: (v) => setState(() => _down = v),
                 child: Center(
                   child: Padding(
@@ -139,7 +143,10 @@ class MenuCard extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: Colors.white.withValues(alpha: .3))),
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
-            onTap: onTap,
+            onTap: () {
+              app.audio.click();
+              onTap();
+            },
             child: SizedBox(
               width: 100,
               height: 78,
@@ -177,7 +184,7 @@ class CoinBadge extends StatelessWidget {
       );
 }
 
-/// "Lv 3 · Builder" with an XP progress bar.
+/// Tappable player-level badge: gold level circle, title, XP bar. Opens the "Your Level" screen.
 class LevelChip extends StatelessWidget {
   const LevelChip({super.key});
   @override
@@ -185,17 +192,53 @@ class LevelChip extends StatelessWidget {
         listenable: app.store,
         builder: (_, _) {
           final s = app.store;
-          return Container(
-            key: const Key('levelChip'),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: Colors.black.withValues(alpha: .3), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white24)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text('Lv ${s.level} · ${s.title}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-              const SizedBox(height: 4),
-              SizedBox(width: 110, child: XpBar(value: s.xpInLevel / s.xpNeeded)),
-            ]),
+          return Material(
+            color: Colors.black.withValues(alpha: .45),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30), side: const BorderSide(color: Colors.white30)),
+            child: InkWell(
+              key: const Key('levelChip'),
+              borderRadius: BorderRadius.circular(30),
+              onTap: () {
+                app.audio.click();
+                Navigator.push(context, fadeRoute(const LevelScreen()));
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(5, 5, 12, 5),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  LevelBadge(level: s.level, size: 38),
+                  const SizedBox(width: 8),
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text(s.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                    const SizedBox(height: 3),
+                    SizedBox(width: 82, child: XpBar(value: s.xpInLevel / s.xpNeeded, height: 6)),
+                  ]),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, size: 18, color: Colors.white70),
+                ]),
+              ),
+            ),
           );
         },
+      );
+}
+
+/// Gold circle with the level number (like a rank badge).
+class LevelBadge extends StatelessWidget {
+  final int level;
+  final double size;
+  const LevelBadge({super.key, required this.level, this.size = 40});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFE27A), Color(0xFFF59E0B), Color(0xFFB45309)]),
+          border: Border.all(color: Colors.white, width: size > 60 ? 3 : 2),
+          boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: .5), blurRadius: size / 3)],
+        ),
+        child: Text('$level', style: TextStyle(fontSize: size * .44, fontWeight: FontWeight.w900, color: const Color(0xFF3B2100))),
       );
 }
 
@@ -218,6 +261,7 @@ class SubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SkyBackground(
+          dim: .78,
           child: SafeArea(
             child: Center(
               child: ConstrainedBox(
@@ -257,3 +301,65 @@ Route<T> fadeRoute<T>(Widget page) => PageRouteBuilder<T>(
         child: SlideTransition(position: Tween(begin: const Offset(0, .04), end: Offset.zero).animate(CurvedAnimation(parent: a, curve: Curves.easeOut)), child: child),
       ),
     );
+
+/// Dark rounded card used on sub-screens so text is always readable.
+const kCardColor = Color(0xCC0B1224);
+
+BoxDecoration cardDecoration({Color? border, Color? color}) => BoxDecoration(
+      color: color ?? kCardColor,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: border ?? Colors.white.withValues(alpha: .14)),
+    );
+
+/// Big rounded PLAY button with a vector play icon.
+class PlayButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const PlayButton({super.key, required this.onPressed});
+  @override
+  Widget build(BuildContext context) => Pulse(
+        child: Container(
+          width: 270,
+          height: 74,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(40),
+            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF4ADE80), Color(0xFF16A34A), Color(0xFF0F7A35)]),
+            border: Border.all(color: Colors.white.withValues(alpha: .55), width: 2),
+            boxShadow: [BoxShadow(color: const Color(0xFF22C55E).withValues(alpha: .6), blurRadius: 22, spreadRadius: 1, offset: const Offset(0, 4))],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const Key('playButton'),
+              borderRadius: BorderRadius.circular(40),
+              onTap: () {
+                app.audio.click();
+                onPressed();
+              },
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]),
+                  child: const Icon(Icons.play_arrow_rounded, size: 44, color: Color(0xFF15803D)),
+                ),
+                const SizedBox(width: 14),
+                const Text('PLAY', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 3, shadows: [Shadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))])),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
+/// Dark card built on Material (required when it contains ListTile / SwitchListTile so ripples show).
+class CardBox extends StatelessWidget {
+  final Widget child;
+  const CardBox({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: kCardColor,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withValues(alpha: .14))),
+        child: child,
+      );
+}

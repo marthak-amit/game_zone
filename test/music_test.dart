@@ -5,7 +5,7 @@ import 'package:sky_stack/services/music.dart';
 
 void main() {
   test('every world gets a valid, non-clipping, seamless music loop', () {
-    for (var w = 0; w < 6; w++) {
+    for (var w = 0; w <= homeTrack; w++) {
       final sw = Stopwatch()..start();
       final wav = buildTrack(w);
       sw.stop();

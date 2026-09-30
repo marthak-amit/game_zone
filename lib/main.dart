@@ -41,7 +41,6 @@ class _SkyStackAppState extends State<SkyStackApp> with WidgetsBindingObserver {
     } else {
       app.audio.music.pause();
       app.audio.setRain(false);
-      app.audio.voice.stop();
     }
   }
 

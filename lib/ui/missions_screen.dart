@@ -26,7 +26,7 @@ class MissionsScreen extends StatelessWidget {
   Widget _row(Mission m, int i) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)),
+        decoration: cardDecoration(),
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -39,7 +39,7 @@ class MissionsScreen extends StatelessWidget {
           const SizedBox(width: 12),
           FilledButton(
             key: Key('claim_$i'),
-            style: FilledButton.styleFrom(backgroundColor: kGold, foregroundColor: Colors.black),
+            style: FilledButton.styleFrom(backgroundColor: kGold, foregroundColor: Colors.black, disabledBackgroundColor: Colors.white24, disabledForegroundColor: Colors.white),
             onPressed: m.ready ? () {
               app.store.claimMission(m);
               app.audio.beep(880, .2);

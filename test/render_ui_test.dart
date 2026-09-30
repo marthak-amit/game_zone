@@ -9,6 +9,8 @@ import 'package:sky_stack/services/app_services.dart';
 import 'package:sky_stack/store.dart';
 import 'package:sky_stack/ui/achievements_screen.dart';
 import 'package:sky_stack/ui/game_screen.dart';
+import 'package:sky_stack/ui/level_screen.dart';
+import 'package:sky_stack/ui/missions_screen.dart';
 import 'package:sky_stack/ui/menu_screen.dart';
 import 'package:sky_stack/ui/settings_screen.dart';
 import 'package:sky_stack/ui/shop_screen.dart';
@@ -50,9 +52,11 @@ void main() {
       await shot(name);
     }
 
-    final prefs = <String, Object>{'coins': 1240, 'best': 37, 'games': 14, 'xp': 420, 'streak': 3, 'ach_s10': true, 'ach_c5': true};
+    final prefs = <String, Object>{'coins': 1240, 'best': 37, 'games': 14, 'xp': 2300, 'streak': 3, 'ach_s10': true, 'ach_c5': true};
     await show(const MenuScreen(), prefs, 'ui_menu');
     await show(const SpinScreen(), prefs, 'ui_spin');
+    await show(const LevelScreen(), {...prefs, 'xp': 2300}, 'ui_level');
+    await show(const MissionsScreen(), prefs, 'ui_missions');
     await show(const AchievementsScreen(), prefs, 'ui_achievements');
     await show(const ShopScreen(), prefs, 'ui_shop');
     await show(const SettingsScreen(), prefs, 'ui_settings');

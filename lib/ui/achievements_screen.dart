@@ -31,11 +31,7 @@ class AchievementsScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: done ? const Color(0x3316A34A) : Colors.white12,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: done ? const Color(0xFF5BE7A9) : Colors.white12),
-      ),
+      decoration: cardDecoration(color: done ? const Color(0xE6103A25) : kCardColor, border: done ? const Color(0xFF5BE7A9) : null),
       child: Row(children: [
         Opacity(opacity: done ? 1 : .35, child: Text(a.icon, style: const TextStyle(fontSize: 30))),
         const SizedBox(width: 12),

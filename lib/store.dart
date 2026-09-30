@@ -60,7 +60,6 @@ class Store extends ChangeNotifier {
   bool get sound => _p.getBool('sound') ?? true;
   bool get vibe => _p.getBool('vibe') ?? true;
   bool get music => _p.getBool('music') ?? true;
-  bool get voice => _p.getBool('voice') ?? true;
   bool get noAds => _p.getBool('noAds') ?? false;
   bool get vip => _p.getBool('vip') ?? false;
   String get skinId => _p.getString('skin') ?? 'neon';
@@ -85,7 +84,6 @@ class Store extends ChangeNotifier {
   void setSound(bool v) => _set('sound', v);
   void setVibe(bool v) => _set('vibe', v);
   void setMusic(bool v) => _set('music', v);
-  void setVoice(bool v) => _set('voice', v);
   void setNoAds() => _set('noAds', true);
   void setVip() {
     _p.setBool('vip', true);
