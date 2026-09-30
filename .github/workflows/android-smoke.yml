@@ -9,8 +9,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # full = the real app; noaudio / noanim = diagnostic builds that switch a feature family off
-        variant: [full, noaudio, noanim]
+        # diagnostic builds that each switch one feature family off (real app = 'full')
+        variant: [noscenery, noloops, nocoin]
     env:
       VARIANT: ${{ matrix.variant }}
     runs-on: ubuntu-latest

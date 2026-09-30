@@ -374,7 +374,7 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
       scenery.update(dt, WorldState.at(widget.fixed ?? pos));
       _tick.value++;
     });
-    if (!AppConfig.noAnim) _t.start(); // diagnostic 'noanim' CI variant keeps the background still
+    if (!AppConfig.staticScenery) _t.start(); // diagnostic 'noanim' CI variant keeps the background still
   }
 
   @override

@@ -5,6 +5,12 @@ class AppConfig {
   static const String variant = String.fromEnvironment('VARIANT', defaultValue: 'full');
   static bool get noAudio => variant == 'noaudio';
   static bool get noAnim => variant == 'noanim';
+  /// Background scenery frozen (variants: noscenery, noanim).
+  static bool get staticScenery => variant == 'noscenery' || noAnim;
+  /// Looping widget animations (title, PLAY shine/pulse, badges, coin) frozen (variants: noloops, noanim).
+  static bool get noLoops => variant == 'noloops' || noAnim;
+  /// Only the spinning coin frozen (variant: nocoin).
+  static bool get noCoin => variant == 'nocoin';
 
   static const bool liveMode = bool.fromEnvironment('LIVE', defaultValue: false);
 
