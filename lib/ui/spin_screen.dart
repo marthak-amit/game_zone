@@ -65,7 +65,7 @@ class _SpinScreenState extends State<SpinScreen> with SingleTickerProviderStateM
     final coins = Store.spinPrizes[prize];
     app.audio.fanfare();
     app.audio.voice.say(coins >= 250 ? 'Jackpot! $coins coins' : '$coins coins', force: true);
-    if (coins >= 100) confetti.fire(seconds: coins >= 250 ? 5 : 2.5, density: coins >= 250 ? 2 : 1);
+    if (coins >= 100) confetti.fire(seconds: coins >= 250 ? 2.4 : 1.4, density: coins >= 250 ? 1.4 : 1);
     setState(() {
       spinning = false;
       won = coins;

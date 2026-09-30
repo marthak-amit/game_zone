@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 /// Fire this to rain confetti, stars and hearts from the top of the screen.
 class ConfettiController {
   _ConfettiState? _state;
-  void fire({double seconds = 4, double density = 1}) => _state?._fire(seconds, density);
+  void fire({double seconds = 1.6, double density = 1}) => _state?._fire(seconds, density);
 }
 
 class _Bit {
@@ -68,18 +68,18 @@ class _ConfettiState extends State<Confetti> with SingleTickerProviderStateMixin
     _t += dt;
     if (_emitLeft > 0) {
       _emitLeft -= dt;
-      _carry += dt * 55 * _density;
+      _carry += dt * 70 * _density;
       while (_carry >= 1) {
         _carry -= 1;
         _bits.add(_Bit(
           _rnd.nextDouble() * _size.width,
-          -14,
-          (_rnd.nextDouble() - .5) * 30,
-          90 + _rnd.nextDouble() * 150,
+          -8,
+          (_rnd.nextDouble() - .5) * 40,
+          360 + _rnd.nextDouble() * 320, // fast fall (px/s)
           _rnd.nextDouble() * 6.28,
-          (_rnd.nextDouble() - .5) * 9,
-          5 + _rnd.nextDouble() * 8,
-          14 + _rnd.nextDouble() * 26,
+          (_rnd.nextDouble() - .5) * 14,
+          3 + _rnd.nextDouble() * 3.5, // small pieces
+          6 + _rnd.nextDouble() * 12,
           _rnd.nextDouble() * 6.28,
           _rnd.nextInt(4),
           _colors[_rnd.nextInt(_colors.length)],

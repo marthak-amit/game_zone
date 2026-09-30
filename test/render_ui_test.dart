@@ -56,7 +56,8 @@ void main() {
     await show(const AchievementsScreen(), prefs, 'ui_achievements');
     await show(const ShopScreen(), prefs, 'ui_shop');
     await show(const SettingsScreen(), prefs, 'ui_settings');
-    await show(const GameScreen(), {'games': 5}, 'ui_gameover_newbest', pumpMs: 2200, act: () async {
+    await show(const GameScreen(), {'games': 5}, 'ui_gameover_newbest', pumpMs: 16, act: () async {
+      await t.pump(const Duration(milliseconds: 900)); // 'Get ready' grace
       final st = t.state(find.byType(GameScreen)) as dynamic;
       for (var i = 0; i < 9; i++) {
         st.engine.cur.x = st.engine.top.x; // perfect drop
@@ -65,8 +66,8 @@ void main() {
       }
       st.engine.cur.x = st.engine.top.x + 999; // then miss
       await t.tap(find.byKey(const Key('playfield')));
-      for (var i = 0; i < 25; i++) {
-        await t.pump(const Duration(milliseconds: 100)); // let count-up + confetti animate
+      for (var i = 0; i < 82; i++) {
+        await t.pump(const Duration(milliseconds: 16)); // real 60fps frames: card at 0.7s, confetti mid-fall
       }
     });
   }, skip: !enabled);

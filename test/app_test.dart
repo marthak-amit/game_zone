@@ -7,6 +7,8 @@ import 'package:sky_stack/services/ads.dart';
 import 'package:sky_stack/services/app_services.dart';
 import 'package:sky_stack/services/iap.dart';
 import 'package:sky_stack/store.dart';
+import 'package:sky_stack/ui/confetti.dart';
+import 'package:sky_stack/ui/game_screen.dart';
 
 class FakeAds implements AdService {
   int rewardedCalls = 0, interstitials = 0;
@@ -289,5 +291,60 @@ void main() {
       'streak': 6,
     });
     expect((await Store.load()).nextStreak, 1);
+  });
+
+  testWidgets('confetti is quick: the whole effect is over in under 4 seconds', (t) async {
+    final c = ConfettiController();
+    await t.pumpWidget(MaterialApp(home: Confetti(controller: c)));
+    c.fire(); // default is short
+    await t.pump();
+    var ms = 0;
+    while (ms < 12000) {
+      await t.pump(const Duration(milliseconds: 16)); // realistic 60 fps frames
+      ms += 16;
+      if (!t.binding.hasScheduledFrame) break;
+    }
+    expect(ms, greaterThan(500), reason: 'it should actually play');
+    expect(ms, lessThan(4000), reason: 'confetti should be finished within 4 s');
+  });
+
+  testWidgets('game start has a short "get ready" grace; then the block moves and taps count', (t) async {
+    await boot(t, prefs: {'games': 5});
+    await startPlaying(t);
+    final e = (t.state(find.byType(GameScreen)) as dynamic).engine;
+    final x0 = e.cur.x;
+    await t.tap(find.byKey(const Key('playfield'))); // too early: ignored
+    await t.pump();
+    expect(e.score, 0);
+    expect(e.cur.x, x0);
+    await t.pump(const Duration(milliseconds: 1200));
+    expect(e.cur.x, isNot(x0), reason: 'block should be moving after the grace period');
+  });
+
+  testWidgets('a miss lets the block fall first; the result card appears shortly after', (t) async {
+    await boot(t, prefs: {'games': 5});
+    await startPlaying(t);
+    await t.pump(const Duration(milliseconds: 1000));
+    final e = (t.state(find.byType(GameScreen)) as dynamic).engine;
+    e.cur.x = e.top.x + 999;
+    await t.tap(find.byKey(const Key('playfield')));
+    await t.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const Key('finalScore')), findsNothing, reason: 'still showing the fall');
+    expect(e.over, isTrue);
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.byKey(const Key('finalScore')), findsOneWidget);
+  });
+
+  testWidgets('Android back pauses the game instead of leaving it', (t) async {
+    await boot(t, prefs: {'games': 5});
+    await startPlaying(t);
+    await t.pump(const Duration(milliseconds: 900));
+    await t.binding.handlePopRoute();
+    await t.pump();
+    expect(find.text('Paused'), findsOneWidget);
+    expect(find.byKey(const Key('playfield')), findsOneWidget); // still on the game screen
+    await t.tap(find.text('▶ Resume'));
+    await t.pump();
+    expect(find.text('Paused'), findsNothing);
   });
 }

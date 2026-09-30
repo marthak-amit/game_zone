@@ -43,7 +43,7 @@ class Ring {
 
 /// Pure game logic, independent of Flutter widgets (unit-testable).
 class GameEngine {
-  static const double blockH = 28, baseInset = 140, startWidth = 200, perfectTol = 5;
+  static const double blockH = 28, baseInset = 140, startWidth = 200, perfectTol = 8;
   static const int blocksPerWorld = 12, feverCombo = 5;
 
   final Random rnd;
