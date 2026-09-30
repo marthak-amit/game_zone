@@ -1,6 +1,11 @@
 /// Central configuration. Change [liveMode] to true (or build with
 /// `--dart-define=LIVE=true`) once real AdMob / store IDs are in place.
 class AppConfig {
+  /// Diagnostic build variant (CI only): 'full' (normal), 'noaudio' (all sound off), 'noanim' (looping animations off).
+  static const String variant = String.fromEnvironment('VARIANT', defaultValue: 'full');
+  static bool get noAudio => variant == 'noaudio';
+  static bool get noAnim => variant == 'noanim';
+
   static const bool liveMode = bool.fromEnvironment('LIVE', defaultValue: false);
 
   // Google's official TEST ad units. Replace with your own from admob.google.com.

@@ -6,7 +6,7 @@ PKG=com.amit.sky_stack
 A() { timeout "${T:-25}" adb "$@"; local rc=$?; [ $rc -eq 124 ] && echo "!! TIMEOUT: adb $*"; return $rc; }
 say() { echo "[$(date +%H:%M:%S)] $*"; }
 
-say "logcat -c";            A logcat -c
+say "VARIANT=${VARIANT:-full}: logcat -c";            A logcat -c
 # Record logcat and host load continuously so evidence survives even if the emulator dies.
 ( adb logcat -v time > smoke_logcat.txt 2>&1 & )
 ( while true; do echo "--- $(date +%H:%M:%S)"; free -m | sed -n 2p; uptime; sleep 4; done > smoke_host.txt 2>&1 & )
@@ -27,6 +27,8 @@ say "=== MEDIA PLAYERS (should stay small) ==="; A shell dumpsys media.player 2>
 say "=== ANR / FROZEN? ==="; A logcat -d | grep -iE "ANR in|Input dispatching timed out|not responding" | head -5
 say "=== CRASH BUFFER ===";  A logcat -d -b crash | head -60
 say "=== LOGCAT HIGHLIGHTS (recorded live) ==="; grep -E "FATAL|AndroidRuntime|E flutter|lowmemory|lmkd|Out of memory|OOM|Davey|Skipped [0-9]+ frames" smoke_logcat.txt | tail -25
-say "=== HOST LOAD (tail) ==="; tail -12 smoke_host.txt
+say "=== APP / AUDIO / SYSTEM LINES ==="; grep -E "sky_stack|Start proc|audioplayers|MediaPlayer|AudioTrack|AudioFlinger|lmkd|Killing|has died|qemu|Fatal|SIGSEGV|tombstone|OpenGLRenderer.*Davey! duration=[0-9]{4,}" smoke_logcat.txt | tail -45 | cut -c1-200
+say "=== LAST 35 LOG LINES BEFORE THE END ==="; tail -35 smoke_logcat.txt | cut -c1-200
+say "=== HOST LOAD (tail) ==="; tail -6 smoke_host.txt
 say "=== FLUTTER ERRORS ==="; A logcat -d -s flutter:E | tail -20
 if A shell pidof $PKG; then say "SMOKE RESULT: APP RUNNING OK"; else say "SMOKE RESULT: APP NOT RUNNING"; exit 1; fi

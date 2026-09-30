@@ -117,7 +117,7 @@ class Pulse extends StatefulWidget {
 }
 
 class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300))..repeat(reverse: true);
+  late final AnimationController _c = loopController(this, const Duration(milliseconds: 1300), reverse: true);
   @override
   void dispose() {
     _c.dispose();
@@ -291,7 +291,7 @@ class PlayButton extends StatefulWidget {
 }
 
 class _PlayButtonState extends State<PlayButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat();
+  late final AnimationController _shine = loopController(this, const Duration(milliseconds: 2800));
   @override
   void dispose() {
     _shine.dispose();

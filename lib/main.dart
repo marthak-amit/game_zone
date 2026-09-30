@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'config.dart';
 import 'services/app_services.dart';
 import 'store.dart';
 import 'ui/menu_screen.dart';
@@ -9,6 +10,7 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final store = await Store.load();
   app = AppServices(store: store);
+  if (AppConfig.noAudio) app.audio.available = false;
   runApp(const SkyStackApp());
   // Ads/billing initialise in the background so the game opens instantly.
   app.init();

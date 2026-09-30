@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import '../config.dart';
 import '../services/app_services.dart';
 import '../services/music.dart';
 import 'block_painter.dart';
@@ -372,7 +373,8 @@ class _SceneryViewState extends State<SceneryView> with SingleTickerProviderStat
       if (app.audio.music.current != homeTrack) app.audio.music.setWorld(homeTrack);
       scenery.update(dt, WorldState.at(widget.fixed ?? pos));
       _tick.value++;
-    })..start();
+    });
+    if (!AppConfig.noAnim) _t.start(); // diagnostic 'noanim' CI variant keeps the background still
   }
 
   @override

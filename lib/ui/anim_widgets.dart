@@ -1,6 +1,14 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../config.dart';
 import '../services/app_services.dart';
+
+/// Creates a looping animation controller (it stays still in the diagnostic 'noanim' CI variant).
+AnimationController loopController(TickerProvider vsync, Duration duration, {bool reverse = false}) {
+  final c = AnimationController(vsync: vsync, duration: duration);
+  if (!AppConfig.noAnim) c.repeat(reverse: reverse);
+  return c;
+}
 
 /// Compact icon tile used in the menu's single row of secondary actions.
 class MenuTile extends StatelessWidget {
@@ -84,7 +92,7 @@ class Bob extends StatefulWidget {
 }
 
 class _BobState extends State<Bob> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: widget.period)..repeat(reverse: true);
+  late final AnimationController _c = loopController(this, widget.period, reverse: true);
   @override
   void dispose() {
     _c.dispose();
@@ -108,7 +116,7 @@ class Wiggle extends StatefulWidget {
 }
 
 class _WiggleState extends State<Wiggle> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+  late final AnimationController _c = loopController(this, const Duration(milliseconds: 1400));
   @override
   void dispose() {
     _c.dispose();
@@ -139,7 +147,13 @@ class PopIn extends StatefulWidget {
 class _PopInState extends State<PopIn> with SingleTickerProviderStateMixin {
   static const _anim = Duration(milliseconds: 520);
   // The delay is part of the animation itself (no Timer needed): 0..delay is idle, then the pop plays.
-  late final AnimationController _c = AnimationController(vsync: this, duration: widget.delay + _anim)..forward();
+  late final AnimationController _c = AnimationController(vsync: this, duration: widget.delay + _anim)..value = AppConfig.noAnim ? 1 : 0;
+  @override
+  void initState() {
+    super.initState();
+    if (!AppConfig.noAnim) _c.forward();
+  }
+
   late final double _start = widget.delay.inMilliseconds / (widget.delay + _anim).inMilliseconds;
 
   @override
@@ -171,7 +185,7 @@ class SpinningCoin extends StatefulWidget {
 }
 
 class _SpinningCoinState extends State<SpinningCoin> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700))..repeat();
+  late final AnimationController _c = loopController(this, const Duration(milliseconds: 1700));
   @override
   void dispose() {
     _c.dispose();

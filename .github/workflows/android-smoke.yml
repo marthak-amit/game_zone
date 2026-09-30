@@ -5,6 +5,14 @@ on:
     paths: ['lib/**', 'android/**', 'pubspec.yaml', 'scripts/**', '.github/workflows/android-smoke.yml']
 jobs:
   smoke:
+    name: smoke (${{ matrix.variant }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # full = the real app; noaudio / noanim = diagnostic builds that switch a feature family off
+        variant: [full, noaudio, noanim]
+    env:
+      VARIANT: ${{ matrix.variant }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -18,7 +26,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --dart-define=VARIANT=${{ matrix.variant }}
       - name: Free memory before starting the emulator
         run: |
           (cd android && ./gradlew --stop) || true
@@ -36,7 +44,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: smoke-screenshots
+          name: smoke-${{ matrix.variant }}
           path: |
             smoke_*.png
             smoke_logcat.txt
