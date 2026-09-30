@@ -10,6 +10,11 @@ Tap to drop blocks, build the tallest tower. Runs as a web game (PWA) and as an 
 | IAP: Remove Ads $2.99, Coins $0.99/$3.99, VIP $4.99 | Play Billing / StoreKit via `cordova-plugin-purchase` |
 | Retention: daily bonus, skins, best score | `game.js` |
 
+## Game features (complete)
+Stacking gameplay with perfect-drop combos, falling-piece animation, tutorial, pause (auto-pause on app switch), 6 skins,
+daily login streak reward (up to Day 7), 3 daily missions, stats, share score, sound/vibration settings, saved progress.
+Ads and purchases currently run in **demo mode** (fake ad screen, instant purchases) — real AdMob/billing is the next phase.
+
 ## Run locally (demo mode: fake ads, instant purchases)
 Open `index.html` or `python3 -m http.server`.
 

@@ -18,6 +18,7 @@ button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:14px 22p
 button.green{background:#16a34a}button.gold{background:#f59e0b;color:#111}button.grey{background:#475569}
 button:disabled{opacity:.5}
 #skins{display:grid;grid-template-columns:1fr 1fr;gap:8px}#skins .skin{min-width:0}
+#missions .mrow{display:flex;align-items:center;gap:10px;background:#ffffff18;border-radius:12px;padding:10px;margin-bottom:8px}
 #adOverlay{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99}
 </style></head><body>
 <div id="wrap">
@@ -25,32 +26,60 @@ button:disabled{opacity:.5}
   <div id="hud"><span id="coins"></span><span id="best"></span></div>
   <div id="score">0</div>
 
-  <div id="menu" class="panel">
+  <button id="pauseBtn" style="display:none;position:absolute;top:44px;right:12px;min-width:0;padding:8px 12px;background:#0006">⏸</button>
+
+  <div id="menu" class="panel" style="display:flex">
     <h1>SKY STACK</h1>
     <button id="play" class="green">▶ PLAY</button>
-    <button id="daily" class="gold">🎁 Daily bonus +100 (watch ad)</button>
-    <button id="freeCoins" class="grey">📺 Free coins +50</button>
+    <button id="daily" class="gold" style="display:none"></button>
+    <button id="dailyDouble" class="green" style="display:none"></button>
+    <button id="missionsBtn">🎯 Missions</button>
     <button id="shopBtn">🛒 Shop</button>
+    <button id="freeCoins" class="grey">📺 Free coins +50</button>
+    <button id="settingsBtn" class="grey">⚙ Settings &amp; Stats</button>
     <button id="noadsBtn" class="gold">🚫 Remove Ads — $2.99</button>
   </div>
 
+  <div id="pausePanel" class="panel">
+    <h1 style="font-size:36px">Paused</h1>
+    <button id="resume" class="green">▶ Resume</button>
+    <button id="quit" class="grey">🏠 Quit to menu</button>
+  </div>
+
   <div id="over" class="panel">
-    <h1 style="font-size:36px">Game Over</h1>
+    <h1 style="font-size:36px;margin:0">Game Over</h1>
+    <div id="newBest" style="display:none;color:#facc15;font-weight:800;font-size:22px">🏆 NEW BEST!</div>
     <div style="font-size:22px">Score <b id="finalScore">0</b> · +🪙<b id="finalCoins">0</b></div>
     <button id="revive" class="gold">📺 Continue (watch ad)</button>
     <button id="double" class="green">📺 Double coins</button>
     <button id="again">↻ Play again</button>
+    <button id="shareBtn" class="grey">📤 Share score</button>
+    <button id="shopBtn2" class="grey">🛒 Shop</button>
     <button id="home" class="grey">🏠 Menu</button>
-    <button class="grey" onclick="document.getElementById('shopBtn').click()">🛒 Shop</button>
   </div>
 
-  <div id="shop" class="panel" style="z-index:5">
-    <h2>Shop</h2>
+  <div id="missions" class="panel">
+    <h2>Daily Missions</h2>
+    <div id="missionList" style="width:100%"></div>
+    <button id="closeMissions" class="grey">Back</button>
+  </div>
+
+  <div id="settings" class="panel">
+    <h2>Settings &amp; Stats</h2>
+    <button id="soundBtn"></button>
+    <button id="vibeBtn"></button>
+    <div id="stats" style="line-height:1.8"></div>
+    <button id="closeSettings" class="grey">Back</button>
+  </div>
+
+  <div id="shop" class="panel">
+    <h2 style="margin:0">Shop</h2>
     <div id="skins"></div>
+    <div id="shopMsg" style="color:#fbbf24;min-height:20px"></div>
     <button data-sku="coins_500" class="gold">🪙 500 coins — $0.99</button>
     <button data-sku="coins_2500" class="gold">🪙 2500 coins — $3.99</button>
     <button data-sku="vip_pass" class="green">👑 VIP: no ads, 2x coins, Gold skin — $4.99</button>
-    <button id="closeShop" class="grey">Close</button>
+    <button id="closeShop" class="grey">Back</button>
   </div>
 </div>
 <div id="adOverlay"><div id="adText" style="font-size:20px"></div><button id="adClose" disabled>Please wait…</button></div>
