@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         # diagnostic builds that each switch one feature family off (real app = 'full')
-        variant: [full, lite]
+        variant: [blank, full]
     env:
       VARIANT: ${{ matrix.variant }}
     runs-on: ubuntu-latest

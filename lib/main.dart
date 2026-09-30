@@ -8,6 +8,11 @@ import 'ui/menu_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (AppConfig.variant == 'blank') {
+    // CI control: a static screen, to tell app problems from emulator problems.
+    runApp(const MaterialApp(home: Scaffold(body: Center(child: Text('blank')))));
+    return;
+  }
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final store = await Store.load();
   app = AppServices(store: store);
